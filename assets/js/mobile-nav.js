@@ -157,10 +157,12 @@ document.addEventListener('DOMContentLoaded', function () {
     canonical.classList.toggle('tree-panel-inactive', !isCanonical);
     var panels = document.querySelectorAll('.sidebar-mobile-tree-panel');
     for (var i = 0; i < panels.length; i++) {
-      panels[i].classList.toggle(
-        'tree-panel-active',
-        !isCanonical && panels[i].getAttribute('data-tab-panel') === name
-      );
+      var active = !isCanonical && panels[i].getAttribute('data-tab-panel') === name;
+      panels[i].classList.toggle('tree-panel-active', active);
+      /* Panels render aria-hidden; lift it on the shown one so screen
+         readers get the tree that is actually on screen. */
+      if (active) panels[i].removeAttribute('aria-hidden');
+      else panels[i].setAttribute('aria-hidden', 'true');
     }
     var links = document.querySelectorAll('.sidebar-mobile-tab-link');
     for (var j = 0; j < links.length; j++) {

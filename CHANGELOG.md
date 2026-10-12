@@ -24,6 +24,20 @@ deliberately, one PR at a time. Never use floating refs in production hugo confi
 
 ---
 
+## [Unreleased]
+
+### Fix — keyboard users could not open navbar dropdowns, and screen readers got an empty mobile drawer after switching tabs (`assets/css/docs-theme-extras.css`, `assets/js/mobile-nav.js`, `layouts/_partials/navbar.html`, `layouts/partials/sidebar.html`, `tests/docs-tabs-sidebar.spec.ts`)
+
+The shared `.dropdown` rule opened the menu on `:hover` only, so tabbing onto a navbar dropdown trigger (for example, the Docs and version dropdowns in kgateway's local navbar at https://kgateway.dev/docs/envoy/latest/) never revealed its items. The rule now also matches `:focus-within`, which keeps the menu open while focus is on the trigger or any item inside it.
+
+On mobile, the drawer pre-renders every docTab's tree and marks the inactive ones `aria-hidden="true"`. Tapping a tab chip showed the matching tree by toggling a CSS class but left `aria-hidden` in place, so a screen reader announced an empty drawer for every tab except the page's own (visible on any docTabs site, such as https://agentgateway.dev/docs/kubernetes/latest/ at phone width). `activate()` in `mobile-nav.js` now removes `aria-hidden` from the shown tree and sets it on the others.
+
+The main navbar `<nav>` and the sidebar `<nav>` trees now carry `aria-label`s ("Main" and "Docs", through the `mainNavigation` and `docsNavigation` i18n keys) so that, alongside the already-labeled breadcrumb and table of contents, each navigation landmark is distinguishable in a screen reader's landmark list.
+
+Takes effect when a consumer bumps its extras pin. Local overrides shadow parts of it: kgw oss and agw oss override `_partials/navbar.html`, so neither gets the "Main" label (kgw's navbar still uses this module's `.dropdown` rule, so it does get the `:focus-within` fix); kagent oss overrides `_partials/sidebar.html`, so it doesn't get the sidebar labels. The docs hub and the other consumers get all of it.
+
+Verified with `make test-oss` and `make test-enterprise` (the only failures were the pinned `KNOWN_BROKEN` gate-transparency shape and two timing flakes that passed on retry; the mobile-drawer spec then passed 36 of 36 runs with `--repeat-each=3`). The new `docs-tabs-sidebar.spec.ts` test fails without the `mobile-nav.js` change and passes with it.
+
 ## [0.3.16] — 2026-10-09
 
 ### Fix — tabs inside a `version` or `conditional-text` gate broke the list around them and pushed every later heading out of the page content, unstyled (`layouts/_shortcodes/tabs.html`, `fixture/content/en/test/v2/gate-tabs.md`, `tests/gate-tabs.spec.ts`, `playwright.config.ts`, `MAINTAINING.md`, `docs/content/authoring/shortcodes/tabs.md`)

@@ -130,6 +130,27 @@ test.describe("docTabs hideSidebar — mobile (< 1280px): the drawer always show
       "drawer has no tappable link on a hideSidebar tab",
     ).toBeGreaterThan(0);
   });
+
+  // The other tabs' trees render aria-hidden and are shown by a class toggle.
+  // The toggle used to leave aria-hidden in place, so a screen reader got an
+  // empty drawer for every tab but the page's own.
+  test("tapping a chip exposes that tab's tree to assistive tech, and hides the rest", async ({ page }) => {
+    await page.goto(HIDDEN_URL);
+    await page.evaluate(() => (window as unknown as { toggleMobileSidebar: () => void }).toggleMobileSidebar());
+
+    const panels = page.locator("nav.sidebar-mobile-tree-panel");
+    expect(await panels.count(), "no pre-rendered tab trees to switch to").toBeGreaterThan(0);
+    const target = await panels.first().getAttribute("data-tab-panel");
+    await page.locator(`.sidebar-mobile-tab-link[data-tab-target="${target}"]`).click();
+
+    const shown = page.locator(`nav.sidebar-mobile-tree-panel[data-tab-panel="${target}"]`);
+    await expect(shown).toHaveClass(/tree-panel-active/);
+    await expect(shown, "shown tree is still aria-hidden").not.toHaveAttribute("aria-hidden", "true");
+    await expect(shown).toHaveAttribute("aria-label", "Docs");
+    for (const other of await page.locator(`nav.sidebar-mobile-tree-panel:not([data-tab-panel="${target}"])`).all()) {
+      await expect(other, "a hidden tree was exposed").toHaveAttribute("aria-hidden", "true");
+    }
+  });
 });
 
 // ── The band is sticky ───────────────────────────────────────────────────

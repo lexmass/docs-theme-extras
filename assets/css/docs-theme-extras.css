@@ -2364,7 +2364,10 @@ details[open].hextra-search-other-versions > summary::before {
   display: none;
   min-width: 160px;
 }
-.dropdown:hover .dropdown-content {
+/* :focus-within opens the menu for keyboard users tabbing onto the trigger
+   or into the menu items; hover alone left them unreachable. */
+.dropdown:hover .dropdown-content,
+.dropdown:focus-within .dropdown-content {
   display: block;
 }
 /* Invisible hover bridge between the trigger and the popover so moving
