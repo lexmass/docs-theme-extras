@@ -26,6 +26,18 @@ deliberately, one PR at a time. Never use floating refs in production hugo confi
 
 ## [Unreleased]
 
+### Fix — search froze the page and then returned "No results found" on sites with many version trees (`assets/js/flexsearch.js`, `tests/search-results.spec.ts`, `playwright.config.ts`)
+
+On agentgateway.dev, typing into the search box froze the page for several seconds and then showed "No results found" for every query, on every page (for example, https://agentgateway.dev/docs/standalone/main/documentation/quickstart/llm/). The site keeps 10 version trees in one `search-data.json` (2,805 pages, 18.5 MB), and that size exposed three problems in the search script, all fixed here.
+
+First, the script indexed every page synchronously on first focus, which blocked the main thread for about 3.3 seconds on a fast laptop (longer on slower machines). It now skips pages from versions that the results filter would hide anyway (neither the current version nor in the dropdown), and yields to the main thread every 40 ms while indexing, so the page keeps responding as the user types. Unversioned pages, such as blog posts, are always indexed.
+
+Second, a keyup that fired while the index was still loading searched the empty index, rendered "No results found", and never ran again once the index was ready. `search()` now waits for the index, then renders only if the input still holds the same query.
+
+Third, the per-page section lookup passed no `limit`. FlexSearch applies its default limit of 100 across the whole index before it narrows to the page's tag, so for a common term every page past the first 100 matching sections came back empty and was dropped. On agentgateway.dev, 49 of the top 50 pages for "mcp" were dropped this way. The lookup now passes a high limit. Relatedly, the page search now pulls a larger candidate pool and ranks current-version pages first before it applies `maxPageResults`, because the top 50 hits were otherwise blog posts and copies from other version trees, which the current-version list never shows.
+
+Verified against the production agentgateway.dev bundle by substituting the rendered script in a Playwright session: on `/docs/standalone/main/`, `/docs/kubernetes/latest/`, and `/docs/kubernetes/1.4.x/`, "mcp" and "rate limit" now return current-version results within about 2 seconds of the first keystroke, with no main-thread stall over 150 ms (the live script returns none and stalls for 3.3 seconds). The new `search-results.spec.ts` delays `search-data.json` so that typing always lands before the index loads; it fails on every run without this change and passes with it. The fixture cannot show the version-skip or the limit starvation: its `v1`/`v2` segments are not recognized by `getVersionFromURL`, and it has too few pages to reach 100 matches.
+
 ### Fix — keyboard users could not open navbar dropdowns, and screen readers got an empty mobile drawer after switching tabs (`assets/css/docs-theme-extras.css`, `assets/js/mobile-nav.js`, `layouts/_partials/navbar.html`, `layouts/partials/sidebar.html`, `tests/docs-tabs-sidebar.spec.ts`)
 
 The shared `.dropdown` rule opened the menu on `:hover` only, so tabbing onto a navbar dropdown trigger (for example, the Docs and version dropdowns in kgateway's local navbar at https://kgateway.dev/docs/envoy/latest/) never revealed its items. The rule now also matches `:focus-within`, which keeps the menu open while focus is on the trigger or any item inside it.

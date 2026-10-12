@@ -212,12 +212,19 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // Resolves once the index is fully built. Shared so that every caller (focus,
+  // and any keyup that fires while the index is still loading) waits on the same
+  // build instead of searching a half-filled index.
+  let indexReady = null;
+  function ensureIndex() {
+    if (!indexReady) indexReady = preloadIndex();
+    return indexReady;
+  }
+
   // Initializes the search.
   function init(e) {
     e.target.removeEventListener('focus', init);
-    if (!(window.pageIndex && window.sectionIndex)) {
-      preloadIndex();
-    }
+    ensureIndex();
   }
 
   /**
@@ -255,7 +262,7 @@ document.addEventListener("DOMContentLoaded", function () {
       cache: 100,
       document: {
         id: 'id',
-        store: ['title', 'crumb'],
+        store: ['title', 'crumb', 'version'],
         index: "content"
       }
     });
@@ -276,8 +283,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const resp = await fetch(searchDataURL);
     const data = await resp.json();
+
+    // Skip pages from versions that search() would filter out anyway (a version
+    // that is neither the current one nor in the dropdown). On a site that keeps
+    // many version trees in one search-data.json this is most of the payload:
+    // agentgateway.dev ships 2,805 pages across 10 trees (18.5 MB), and indexing
+    // all of it blocked the main thread for 3+ seconds on first focus, which read
+    // as the site freezing while the user typed. Unversioned pages (blog, landing
+    // pages) are always kept.
+    const currentVersion = getVersionFromURL(window.location.pathname);
+    const isSearchable = (route) => {
+      const v = getVersionFromURL(route);
+      return !v || v === currentVersion || visibleVersions.size === 0 || visibleVersions.has(v);
+    };
+
+    // Hand the main thread back between chunks so typing, scrolling, and the
+    // caret stay responsive while a large index builds.
+    const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+    let sliceStart = performance.now();
+
     let pageId = 0;
     for (const route in data) {
+      if (!isSearchable(route)) continue;
+      if (performance.now() - sliceStart > 40) {
+        await yieldToMain();
+        sliceStart = performance.now();
+      }
       let pageContent = '';
       ++pageId;
       const urlParts = route.split('/').filter(x => x != "" && !x.startsWith('#'));
@@ -341,6 +372,7 @@ document.addEventListener("DOMContentLoaded", function () {
         id: pageId,
         title: data[route].title,
         crumb,
+        version: getVersionFromURL(route),
         content: pageContent
       });
 
@@ -351,12 +383,20 @@ document.addEventListener("DOMContentLoaded", function () {
    * Performs a search based on the provided query and displays the results.
    * @param {Event} e - The event object.
    */
-  function search(e) {
-    const query = e.target.value;
-    if (!e.target.value) {
+  async function search(e) {
+    const input = e.target;
+    if (!input.value) {
       hideSearchResults();
       return;
     }
+
+    // A keyup that lands while the index is still loading used to search the
+    // empty index, render "No results found", and never re-run. Wait for the
+    // build, then drop this call if the user has typed on since: the keyup for
+    // that newer value renders instead.
+    const query = input.value;
+    await ensureIndex();
+    if (input.value !== query) return;
 
     const { resultsElement } = getActiveSearchElement();
     while (resultsElement.firstChild) {
@@ -367,7 +407,19 @@ document.addEventListener("DOMContentLoaded", function () {
     // Configurable search limits with sensible defaults
     const maxPageResults = parseInt('{{- site.Params.search.flexsearch.maxPageResults | default 50 -}}', 10);
     const maxSectionResults = parseInt('{{- site.Params.search.flexsearch.maxSectionResults | default 10 -}}', 10);
-    const pageResults = window.pageIndex.search(query, maxPageResults, { enrich: true, suggest: true })[0]?.result || [];
+    const currentVersion = getVersionFromURL(window.location.pathname);
+
+    // Rank current-version pages ahead of other versions BEFORE the cap. When
+    // several version trees hold the same pages, the top `maxPageResults` hits
+    // are otherwise whichever copies FlexSearch met first (on agentgateway.dev,
+    // blog posts and older trees), and the current version's pages, which are
+    // the only ones shown at the top, never make the cut.
+    const candidates = window.pageIndex.search(query, { limit: maxPageResults * 20, enrich: true, suggest: true })[0]?.result || [];
+    const pageResults = currentVersion
+      ? candidates.filter(r => r.doc.version === currentVersion)
+          .concat(candidates.filter(r => r.doc.version !== currentVersion))
+          .slice(0, maxPageResults)
+      : candidates.slice(0, maxPageResults);
 
     const results = [];
     const pageTitleMatches = {};
@@ -376,8 +428,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const result = pageResults[i];
       pageTitleMatches[i] = 0;
 
+      // `limit` is not the number of sections returned. FlexSearch applies it to
+      // the matching sections across the WHOLE index before narrowing to this
+      // page's tag, so the default of 100 starved every page past the first
+      // hundred matches of a common term and dropped it from the results.
       const sectionResults = window.sectionIndex.search(query,
-        { enrich: true, suggest: true, tag: { 'pageId': `page_${result.id}` } })[0]?.result || [];
+        { limit: 100000, enrich: true, suggest: true, tag: { 'pageId': `page_${result.id}` } })[0]?.result || [];
       let isFirstItemOfPage = true
       const occurred = {}
 
@@ -433,7 +489,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Split by version segment so matching works regardless of URL path prefix.
-    const currentVersion = getVersionFromURL(window.location.pathname);
     let currentGroups, otherGroups;
     if (currentVersion) {
       currentGroups = groupedResults.filter(g => getVersionFromURL(g.route) === currentVersion);
