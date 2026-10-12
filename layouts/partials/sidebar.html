@@ -482,7 +482,7 @@
           {{- with $activeId -}}
             {{- with site.GetPage (printf "%s%s" $vr.lookupPath .) -}}{{- $navRoot = . -}}{{- end -}}
           {{- end -}}
-          <nav class="sidebar-nav" data-tab-panel="{{ $activeTab }}">
+          <nav class="sidebar-nav" data-tab-panel="{{ $activeTab }}" aria-label="{{ (T "docsNavigation") | default "Docs" }}">
             {{- template "render-sidebar-tree" (dict "page" $navRoot "current" $context "versionPrefix" $versionPrefix "depth" 0 "emptyRootLink" $tabsEnabled) -}}
           </nav>
           {{- /* Mobile only: pre-render the OTHER tabs' trees as hidden panels
@@ -499,7 +499,7 @@
                 {{- with .id -}}
                   {{- with site.GetPage (printf "%s%s" $vr.lookupPath .) -}}{{- $panelRoot = . -}}{{- end -}}
                 {{- end -}}
-                <nav class="sidebar-nav sidebar-mobile-tree-panel" data-tab-panel="{{ .name }}" aria-hidden="true">
+                <nav class="sidebar-nav sidebar-mobile-tree-panel" data-tab-panel="{{ .name }}" aria-label="{{ (T "docsNavigation") | default "Docs" }}" aria-hidden="true">
                   {{- template "render-sidebar-tree" (dict "page" $panelRoot "current" $context "versionPrefix" $versionPrefix "depth" 0 "emptyRootLink" true) -}}
                 </nav>
               {{- end -}}
@@ -618,7 +618,7 @@
           {{- if gt (len $sections) 1 -}}
             <span class="sidebar-mobile-only sidebar-mobile-row-label">{{ (T "contents") | default "Contents" }}</span>
           {{- end -}}
-          <nav class="sidebar-nav">
+          <nav class="sidebar-nav" aria-label="{{ (T "docsNavigation") | default "Docs" }}">
             {{- template "render-sidebar-tree" (dict "page" $navRoot "current" $context "versionPrefix" "" "depth" 0) -}}
           </nav>
         </div>

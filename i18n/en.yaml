@@ -1,0 +1,8 @@
+# UI strings for this module's own templates. Consumers override any key in
+# their own i18n/<lang>.yaml. Templates also pass an English `default`, so a
+# language with no file here still renders something.
+
+# Accessible names for the navigation landmarks: a screen reader announces
+# "Main navigation" and "Docs navigation" in its landmark list.
+mainNavigation: Main
+docsNavigation: Docs

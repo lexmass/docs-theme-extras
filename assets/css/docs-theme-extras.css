@@ -2364,8 +2364,21 @@ details[open].hextra-search-other-versions > summary::before {
   display: none;
   min-width: 160px;
 }
-.dropdown:hover .dropdown-content {
+/* :focus-within opens the menu for keyboard users tabbing onto the trigger or
+   into the menu items; hover alone left them unreachable. Not :focus-visible:
+   Chrome blurs the trigger before it focuses the next item, :has(:focus-visible)
+   goes false in between, the menu hides, and Tab skips every item. A mouse
+   click also focuses the trigger in Chrome, so docs-init.js blurs that mouse
+   focus when the pointer leaves, or the menu would stay pinned open. */
+.dropdown:hover .dropdown-content,
+.dropdown:focus-within .dropdown-content {
   display: block;
+}
+/* Escape dismisses the menu (WCAG 1.4.13) until the pointer and focus have
+   both left it. Set and cleared by assets/js/docs-init.js. Must follow the
+   rule above: same specificity, so source order decides. */
+.dropdown.dropdown-dismissed .dropdown-content {
+  display: none;
 }
 /* Invisible hover bridge between the trigger and the popover so moving
    the cursor across the 0.25rem gap doesn't close the menu. */
