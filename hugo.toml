@@ -38,6 +38,14 @@
     source = "data"
     target = "data"
 
+  # UI strings the module's own templates pass to `T` (for example the
+  # navigation landmark labels). Hugo merges translation tables across modules
+  # key by key, so a consumer's i18n/<lang>.yaml still overrides any of these,
+  # and Hextra's own strings are untouched.
+  [[module.mounts]]
+    source = "i18n"
+    target = "i18n"
+
   # Fixture content/assets/static are deliberately NOT mounted at the
   # module level: a module-level mount at target="content" collides with
   # consumer contentDir scoping and would surface the test fixture in

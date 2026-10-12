@@ -252,6 +252,60 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
+  /* ── Navbar hover dropdowns: Escape dismisses ──
+     The `.dropdown` menus open on hover or keyboard focus with CSS alone (see
+     "Navbar dropdowns" in docs-theme-extras.css), so nothing closes them but
+     moving away. WCAG 1.4.13 needs content shown on hover or focus to be
+     dismissible without moving the pointer or focus. Escape adds
+     `.dropdown-dismissed`, which hides the menu until the pointer AND focus have
+     both left the dropdown. The markup belongs to consumer navbars, so this is
+     delegated rather than bound per element.
+
+     Only the shape that stylesheet styles is handled: a `.dropdown` whose
+     direct children are the trigger (`a` or `button`) and the
+     `.dropdown-content` menu, as in kgateway's and agentgateway's navbars. A
+     site that reuses the class name for other markup (ambientmesh's marketing
+     nav nests the menu inside a `<button class="dropdown">`) is left alone;
+     there, "the trigger" would resolve to the first link inside the menu. */
+  function dropdownOf(el){
+    var dd = el && el.closest ? el.closest('.dropdown') : null;
+    return dd && dd.querySelector(':scope > .dropdown-content') ? dd : null;
+  }
+  function dropdownTrigger(dd){
+    return dd.querySelector(':scope > a, :scope > button');
+  }
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+    document.querySelectorAll('.dropdown:hover').forEach(function(dd){
+      if(dropdownOf(dd) === dd) dd.classList.add('dropdown-dismissed');
+    });
+    var focused = dropdownOf(e.target);
+    if(focused){
+      focused.classList.add('dropdown-dismissed');
+      /* Escape from inside the menu would leave focus on a now-hidden item. */
+      var trigger = dropdownTrigger(focused);
+      if(trigger && trigger !== e.target) trigger.focus();
+    }
+  });
+  /* Each event judges its own axis by relatedTarget (where focus or the pointer
+     went), and the other axis by current state. */
+  document.addEventListener('focusout', function(e){
+    var dd = dropdownOf(e.target);
+    if(!dd || !dd.classList.contains('dropdown-dismissed')) return;
+    if(dd.contains(e.relatedTarget) || dd.matches(':hover')) return;
+    dd.classList.remove('dropdown-dismissed');
+  });
+  document.addEventListener('mouseout', function(e){
+    var dd = dropdownOf(e.target);
+    if(!dd || dd.contains(e.relatedTarget)) return;
+    /* The pointer left. A click focuses the trigger in Chrome, and the CSS's
+       :focus-within would then pin the menu open; drop that MOUSE focus.
+       Keyboard focus (:focus-visible) stays, and so does the menu. */
+    var focused = document.activeElement;
+    if(dd.contains(focused) && !focused.matches(':focus-visible')) focused.blur();
+    if(!dd.querySelector(':focus-visible')) dd.classList.remove('dropdown-dismissed');
+  });
+
   /* ── Copy as Markdown ── */
   function processCopyMd(wrapper) {
     var source = wrapper.querySelector('.copy-md-source');

@@ -1,0 +1,5 @@
+# Japanese UI strings for this module's own templates. See en.yaml.
+
+# Accessible names for the navigation landmarks.
+mainNavigation: メイン
+docsNavigation: ドキュメント

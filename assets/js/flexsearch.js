@@ -212,19 +212,28 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  const SEARCH_DEBOUNCE_MS = 100;
+
   // Resolves once the index is fully built. Shared so that every caller (focus,
   // and any keyup that fires while the index is still loading) waits on the same
-  // build instead of searching a half-filled index.
+  // build instead of searching a half-filled index. A failed build (a network
+  // error or a bad search-data.json) clears the cache, so the next keystroke
+  // retries instead of awaiting the same rejected promise forever.
   let indexReady = null;
   function ensureIndex() {
-    if (!indexReady) indexReady = preloadIndex();
+    if (!indexReady) {
+      indexReady = preloadIndex().catch((err) => {
+        indexReady = null;
+        throw err;
+      });
+    }
     return indexReady;
   }
 
   // Initializes the search.
   function init(e) {
     e.target.removeEventListener('focus', init);
-    ensureIndex();
+    ensureIndex().catch((err) => console.error('Search index failed to load:', err));
   }
 
   /**
@@ -240,6 +249,20 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
     return '';
+  }
+
+  /**
+   * Whether search() can ever list a page of version `v` to a reader on a page
+   * of version `current`. The index build and the result split both call this,
+   * so a page skipped at index time is exactly one that search() would drop.
+   *   - On an unversioned page (blog, landing), every version is listed.
+   *   - On a versioned page: the current version, plus the dropdown's versions
+   *     under "Other versions". Unversioned pages are not listed there.
+   *   - An empty visibleVersions set disables the filter (see its comment).
+   */
+  function isListable(v, current) {
+    if (!current || v === current) return true;
+    return visibleVersions.size === 0 || visibleVersions.has(v);
   }
 
   /**
@@ -273,29 +296,24 @@ document.addEventListener("DOMContentLoaded", function () {
       cache: 100,
       document: {
         id: 'id',
-        store: ['title', 'content', 'url', 'display', 'crumb'],
-        index: "content",
-        tag: [{
-          field: "pageId"
-        }]
+        // pageId is stored, not tagged: search() buckets one search's hits by
+        // it, and nothing searches by tag any more.
+        store: ['title', 'content', 'url', 'display', 'crumb', 'pageId'],
+        index: "content"
       }
     });
 
     const resp = await fetch(searchDataURL);
+    if (!resp.ok) throw new Error(`${searchDataURL}: HTTP ${resp.status}`);
     const data = await resp.json();
 
-    // Skip pages from versions that search() would filter out anyway (a version
-    // that is neither the current one nor in the dropdown). On a site that keeps
-    // many version trees in one search-data.json this is most of the payload:
-    // agentgateway.dev ships 2,805 pages across 10 trees (18.5 MB), and indexing
-    // all of it blocked the main thread for 3+ seconds on first focus, which read
-    // as the site freezing while the user typed. Unversioned pages (blog, landing
-    // pages) are always kept.
+    // Skip pages that search() could never list from this page (see
+    // isListable). On a site that keeps many version trees in one
+    // search-data.json this is most of the payload: agentgateway.dev ships 2,805
+    // pages across 10 trees (18.5 MB), and indexing all of it blocked the main
+    // thread for 3+ seconds on first focus, which read as the site freezing while
+    // the user typed. On an unversioned page nothing is skipped.
     const currentVersion = getVersionFromURL(window.location.pathname);
-    const isSearchable = (route) => {
-      const v = getVersionFromURL(route);
-      return !v || v === currentVersion || visibleVersions.size === 0 || visibleVersions.has(v);
-    };
 
     // Hand the main thread back between chunks so typing, scrolling, and the
     // caret stay responsive while a large index builds.
@@ -304,7 +322,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let pageId = 0;
     for (const route in data) {
-      if (!isSearchable(route)) continue;
+      if (!isListable(getVersionFromURL(route), currentVersion)) continue;
       if (performance.now() - sliceStart > 40) {
         await yieldToMain();
         sliceStart = performance.now();
@@ -390,15 +408,35 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // A keyup that lands while the index is still loading used to search the
-    // empty index, render "No results found", and never re-run. Wait for the
-    // build, then drop this call if the user has typed on since: the keyup for
-    // that newer value renders instead.
+    // Debounce: keystrokes closer together than SEARCH_DEBOUNCE_MS render
+    // once, for the last of them. Every call below that sees a newer value
+    // returns, because the keyup for that value renders instead.
     const query = input.value;
-    await ensureIndex();
+    await new Promise(resolve => setTimeout(resolve, SEARCH_DEBOUNCE_MS));
     if (input.value !== query) return;
 
+    // A keyup that lands while the index is still loading used to search the
+    // empty index, render "No results found", and never re-run. Wait for the
+    // build instead.
+    try {
+      await ensureIndex();
+    } catch (err) {
+      // Render nothing rather than "No results found", which would blame the
+      // query. The next keyup retries the load.
+      console.error('Search index failed to load:', err);
+      return;
+    }
+    // Re-check after the wait. The user may have typed on, or left the box
+    // (clicking outside hides the results), and opening the panel now would
+    // pop it up over whatever they moved on to.
+    if (input.value !== query || document.activeElement !== input) return;
+
     const { resultsElement } = getActiveSearchElement();
+    // Keys that don't change the value (arrows, Shift) also fire keyup. If this
+    // query's results are already on screen, leave them, and the highlighted
+    // result, alone.
+    if (resultsElement.dataset.query === query && !resultsElement.classList.contains('hx:hidden')) return;
+    resultsElement.dataset.query = query;
     while (resultsElement.firstChild) {
       resultsElement.removeChild(resultsElement.firstChild);
     }
@@ -421,6 +459,24 @@ document.addEventListener("DOMContentLoaded", function () {
           .slice(0, maxPageResults)
       : candidates.slice(0, maxPageResults);
 
+    // One section search for the whole query, bucketed by page, rather than
+    // one search per page narrowed by the pageId tag. `limit` must be high
+    // either way: FlexSearch applies it across the WHOLE index before a tag
+    // narrows it, so the default of 100 starved every page past the first
+    // hundred matching sections of a common term and dropped it from the
+    // results. Run per page, that high limit cost up to `maxPageResults` full
+    // searches per keystroke: on agentgateway.dev, about 4 seconds of main
+    // thread for "how to configure the gateway".
+    const wanted = new Set(pageResults.map(r => `page_${r.id}`));
+    const sectionsByPage = new Map();
+    const sectionHits = window.sectionIndex.search(query, { limit: 100000, enrich: true, suggest: true })[0]?.result || [];
+    for (const hit of sectionHits) {
+      const key = hit.doc.pageId;
+      if (!wanted.has(key)) continue;
+      if (!sectionsByPage.has(key)) sectionsByPage.set(key, []);
+      sectionsByPage.get(key).push(hit);
+    }
+
     const results = [];
     const pageTitleMatches = {};
 
@@ -428,12 +484,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const result = pageResults[i];
       pageTitleMatches[i] = 0;
 
-      // `limit` is not the number of sections returned. FlexSearch applies it to
-      // the matching sections across the WHOLE index before narrowing to this
-      // page's tag, so the default of 100 starved every page past the first
-      // hundred matches of a common term and dropped it from the results.
-      const sectionResults = window.sectionIndex.search(query,
-        { limit: 100000, enrich: true, suggest: true, tag: { 'pageId': `page_${result.id}` } })[0]?.result || [];
+      const sectionResults = sectionsByPage.get(`page_${result.id}`) || [];
       let isFirstItemOfPage = true
       const occurred = {}
 
@@ -494,7 +545,7 @@ document.addEventListener("DOMContentLoaded", function () {
       currentGroups = groupedResults.filter(g => getVersionFromURL(g.route) === currentVersion);
       otherGroups = groupedResults.filter(g => {
         const v = getVersionFromURL(g.route);
-        return v !== currentVersion && (visibleVersions.size === 0 || visibleVersions.has(v));
+        return v !== currentVersion && isListable(v, currentVersion);
       });
     } else {
       currentGroups = groupedResults;
