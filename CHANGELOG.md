@@ -24,7 +24,7 @@ deliberately, one PR at a time. Never use floating refs in production hugo confi
 
 ---
 
-## [Unreleased]
+## [0.3.17] — 2026-10-12
 
 ### Fix — search froze the page and then returned "No results found" on sites with many version trees (`assets/js/flexsearch.js`, `tests/search-results.spec.ts`, `playwright.config.ts`)
 
