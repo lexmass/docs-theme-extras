@@ -273,7 +273,7 @@ read in `layouts/` or `assets/` and documented nowhere:
 | Key | Read in |
 |---|---|
 | `themeExtras.outputs` | `_partials/docs-llms-directive.html` |
-| `themeExtras.prodHost` | `_partials/page-to-markdown.html`, `partials/copy-markdown.html`, `partials/utils/prod-host.html` |
+| `themeExtras.prodHost` | `_partials/page-to-markdown.html`, `partials/copy-markdown.html`, `partials/utils/prod-host.html`, `sitemap.xml` (through `partials/utils/abs-permalink.html`) |
 | `themeExtras.schemaOrgName` | `_partials/schema.html` |
 | `themeExtras.twitterSite` | `_partials/twitter_cards.html` |
 | `themeExtras.warnMissingDescription` | `partials/themeExtras/head-end.html`, `partials/utils/warn-missing-description.html` |

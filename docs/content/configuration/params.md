@@ -42,7 +42,7 @@ Read in [`layouts/_partials/docs-llms-directive.html`](https://github.com/solo-i
 
 ## `themeExtras.prodHost`
 
-Production host used when rewriting links for the Copy-as-Markdown output. Resolution order is this key, then the host from `baseURL`, then empty — so a site whose `baseURL` already carries a scheme and host does not need to set it.
+Production host used for the absolute URLs that some outputs must carry: links in the Copy-as-Markdown output and `llms.txt`, and every URL in `sitemap.xml`. Resolution order is this key, then the host from `baseURL`, then empty — so a site whose `baseURL` already carries a scheme and host does not need to set it. A site with a host-less `baseURL` (`"/"`) must set it, or its sitemap lists root-relative URLs, which the sitemap protocol does not allow.
 
 Read in [`layouts/_partials/page-to-markdown.html`](https://github.com/solo-io/docs-theme-extras/blob/main/layouts/_partials/page-to-markdown.html), [`layouts/partials/copy-markdown.html`](https://github.com/solo-io/docs-theme-extras/blob/main/layouts/partials/copy-markdown.html), [`layouts/partials/utils/prod-host.html`](https://github.com/solo-io/docs-theme-extras/blob/main/layouts/partials/utils/prod-host.html).
 

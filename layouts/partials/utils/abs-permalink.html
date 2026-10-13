@@ -1,0 +1,23 @@
+{{- /*
+  Returns a permalink as a full URL, for the outputs that must carry one even on
+  a site whose baseURL has no host. The sitemap protocol requires absolute
+  <loc> and hreflang URLs; a site built with baseURL "/" (kgateway.dev,
+  agentgateway.dev, ambientmesh.io — kept host-less so canonifyURLs does not
+  point preview deployments at production) emits root-relative permalinks, and
+  crawlers ignore those entries.
+
+  Prepends `host` only to a ROOT-RELATIVE URL ("/docs/..."). An absolute URL
+  ("https://...", every site whose baseURL carries a host) and a
+  protocol-relative one ("//localhost:1313/...", the shape `hugo server` makes
+  from a path-only baseURL) pass through unchanged, as does everything when
+  `host` is empty — so a site that sets no prodHost gets exactly Hugo's output.
+
+  Call site:
+    {{ $host := partial "utils/prod-host.html" . }}
+    {{ partial "utils/abs-permalink.html" (dict "url" .Permalink "host" $host) }}
+*/ -}}
+{{- $url := .url -}}
+{{- if and .host (hasPrefix $url "/") (not (hasPrefix $url "//")) -}}
+  {{- $url = print .host $url -}}
+{{- end -}}
+{{- return $url -}}

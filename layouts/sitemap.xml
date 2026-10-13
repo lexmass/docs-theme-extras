@@ -1,0 +1,42 @@
+{{ printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" | safeHTML }}
+{{- /*
+  COPY of Hugo v0.160.1's embedded sitemap.xml
+  (tpl/tplimpl/embedded/templates/sitemap.xml). The only change: every
+  .Permalink goes through utils/abs-permalink.html, so a site whose baseURL has
+  no host still publishes full URLs, as the sitemap protocol requires. On a
+  site whose baseURL already carries a host, or that sets no prodHost, the
+  output is byte-identical to Hugo's.
+
+  Re-sync on a Hugo bump: diff this file against the embedded template at the
+  new version and carry over any change outside the three permalink calls.
+  tests/sitemap-absolute.spec.ts holds the behavior, not the copy.
+
+  Not overridden: sitemapindex.xml, which Hugo uses only for a multilingual
+  site. Every host-less consumer is monolingual today; a host-less site that
+  adds a language would get root-relative URLs in its index until that
+  template gets the same change.
+*/ -}}
+{{- $host := partial "utils/prod-host.html" . }}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  {{ range where .Pages "Sitemap.Disable" "ne" true }}
+    {{- if .Permalink -}}
+  <url>
+    <loc>{{ partial "utils/abs-permalink.html" (dict "url" .Permalink "host" $host) }}</loc>{{ if not .Lastmod.IsZero }}
+    <lastmod>{{ safeHTML ( .Lastmod.Format "2006-01-02T15:04:05-07:00" ) }}</lastmod>{{ end }}{{ with .Sitemap.ChangeFreq }}
+    <changefreq>{{ . }}</changefreq>{{ end }}{{ if ge .Sitemap.Priority 0.0 }}
+    <priority>{{ .Sitemap.Priority }}</priority>{{ end }}{{ if .IsTranslated }}{{ range .Translations }}
+    <xhtml:link
+                rel="alternate"
+                hreflang="{{ .Language.Locale }}"
+                href="{{ partial "utils/abs-permalink.html" (dict "url" .Permalink "host" $host) }}"
+                />{{ end }}
+    <xhtml:link
+                rel="alternate"
+                hreflang="{{ .Language.Locale }}"
+                href="{{ partial "utils/abs-permalink.html" (dict "url" .Permalink "host" $host) }}"
+                />{{ end }}
+  </url>
+    {{- end -}}
+  {{ end }}
+</urlset>

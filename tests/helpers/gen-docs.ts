@@ -106,10 +106,13 @@ const PARAM_DOCS: Record<string, string> = {
     "`outputs.markdown = false` when the site does not publish the Markdown " +
     "output format.",
   prodHost:
-    "Production host used when rewriting links for the Copy-as-Markdown " +
-    "output. Resolution order is this key, then the host from `baseURL`, then " +
-    "empty — so a site whose `baseURL` already carries a scheme and host does " +
-    "not need to set it.",
+    "Production host used for the absolute URLs that some outputs must " +
+    "carry: links in the Copy-as-Markdown output and `llms.txt`, and every " +
+    "URL in `sitemap.xml`. Resolution order is this key, then the host from " +
+    "`baseURL`, then empty — so a site whose `baseURL` already carries a " +
+    "scheme and host does not need to set it. A site with a host-less " +
+    "`baseURL` (`\"/\"`) must set it, or its sitemap lists root-relative URLs, " +
+    "which the sitemap protocol does not allow.",
   schemaOrgName:
     "Organization name in the schema.org JSON-LD block. Defaults to " +
     "`site.Title`, which is usually right; set it when the legal or brand name " +
