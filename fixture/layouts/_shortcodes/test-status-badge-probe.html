@@ -1,0 +1,11 @@
+{{- /* FIXTURE-ONLY. Not shipped to consumers — fixture/layouts is mounted by
+       hugo-oss.toml / hugo.toml only.
+
+       Calls `components/test-status-badge.html` for the page it sits on, so
+       tests/test-status-badge.spec.ts can see what the partial emits for that
+       page's `test_status`. The real call site is a consumer's
+       `docs/under-heading.html` slot, which the fixture cannot override (see
+       tests/slot-order.spec.ts), so the probe stands in for it. The wrapper is
+       always emitted, so an empty probe is distinguishable from a missing
+       one. */ -}}
+<div data-test-status-probe="{{ .Page.Params.test_status | default "unset" }}">{{ partial "components/test-status-badge.html" .Page }}</div>

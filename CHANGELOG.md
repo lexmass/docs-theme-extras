@@ -24,6 +24,18 @@ deliberately, one PR at a time. Never use floating refs in production hugo confi
 
 ---
 
+## [Unreleased]
+
+### Add — doc-test "Verified" badge partial (`layouts/_partials/components/test-status-badge.html`, `assets/css/docs-theme-extras.css`, `tests/test-status-badge.spec.ts`, `playwright.config.ts`)
+
+The docs hub now runs doc tests for enterprise agentgateway, but only agentgateway.dev could show readers that a page's examples were tested, because the badge partial and its styles lived in that site's own `layouts/` and `custom.css`. Copying them into the hub would have given two badges that drift apart. The partial and its styles now ship here, so any consumer can opt in with one line in its `docs/under-heading.html` slot: `{{ partial "components/test-status-badge.html" . }}`.
+
+The badge renders only when a page's front matter says `test_status: passed`, which CI writes before a production build with `doc_test_inject_status.py` from solo-io/docs-tests. It renders nothing for `failed` or `partial`, and nothing for a page without the field, so the change emits no markup for a consumer that doesn't call the partial. It is not the slot's default, because the slots must stay empty (`tests/slot-order.spec.ts`), and because agentgateway.dev already overrides that slot with its own copy, so a default would render two badges there. The class names match agentgateway.dev's, so that site can delete its copies when it bumps the module.
+
+Three changes from the agentgateway.dev version. The tooltip is now the badge's accessible description (`aria-describedby`, `role="tooltip"`), where the old `aria-label` on a plain `<span>` is ignored by most screen readers. The badge takes keyboard focus and shows the tooltip on `:focus-visible` as well as hover. The tooltip is anchored to the badge's left edge and wraps, where the old one centered one unwrapped line of about 420px on a badge at the left margin, so on a 375px phone part of it hung off the screen.
+
+Observable after the hub rollout on https://docs.solo.io/agentgateway/kubernetes/latest/documentation/traffic-management/direct-response/ (view source and look for `test-status-badge` under the `<h1>`). Verified with `tests/test-status-badge.spec.ts`: the fixture renders the partial through a fixture-only probe shortcode for one `passed` and one `failed` page, and the spec fails if the gate is loosened to any non-empty `test_status` (checked by loosening it). `make test-oss` and `make test-enterprise` both pass. Also checked against a local docs hub build of agentgateway pointed at this tree: the badge rendered on the one injected page and on no other page of 3,033, in light, dark, and at 375px wide with no horizontal scroll.
+
 ## [0.3.17] — 2026-10-12
 
 ### Fix — search froze the page and then returned "No results found" on sites with many version trees (`assets/js/flexsearch.js`, `tests/search-results.spec.ts`, `playwright.config.ts`)

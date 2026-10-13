@@ -1,0 +1,36 @@
+{{- /*
+  DOC-TEST "VERIFIED" BADGE. Renders only when the page's front matter says
+  `test_status: passed`, and renders nothing otherwise.
+
+  NO PAGE COMMITS THAT FIELD. CI writes it into the page's front matter just
+  before the production build, with
+  solo-io/docs-tests/scripts/doc_test_inject_status.py, from the latest doc-test
+  results. The script can also write `failed` or `partial` (a scenario whose
+  test annotations did not attach). Neither shows a badge: a page earns it only
+  when every scenario on it ran and passed.
+
+  NOT CALLED BY DEFAULT. A consumer opts in by calling it from its own
+  `layouts/partials/docs/under-heading.html`:
+
+      {{ partial "components/test-status-badge.html" . }}
+
+  It is not the slot's default because the slots must stay empty (see
+  tests/slot-order.spec.ts). It also keeps agentgateway.dev, which already
+  overrides that slot with its own copy of this badge, from rendering two
+  badges when it bumps the module.
+
+  The tooltip text is the badge's accessible description, through
+  `aria-describedby`, so screen readers announce it without needing hover. The
+  badge takes focus so keyboard users can open the tooltip too. Styles live in
+  assets/css/docs-theme-extras.css under `.test-status-*`.
+*/ -}}
+{{- if eq .Params.test_status "passed" -}}
+{{- $tip := "Code examples on this page have been automatically tested and verified." -}}
+<span class="test-status-badge test-status-passed" tabindex="0" aria-describedby="test-status-tooltip">
+  <svg class="test-status-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" aria-hidden="true" focusable="false">
+    <path d="M447.9 142.5l-23.2 22L181 395.3l-22 20.8-22-20.8L23.2 287.6 0 265.6l44-46.5 23.2 22L159 328 380.7 118l23.2-22 44 46.5z"/>
+  </svg>
+  <span class="test-status-text">Verified</span>
+  <span class="test-status-tooltip" id="test-status-tooltip" role="tooltip">{{ $tip }}</span>
+</span>
+{{- end -}}
