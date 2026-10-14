@@ -1,6 +1,9 @@
 {{- /*
   EXTENSION SLOT — content injected INSIDE the heading's own column, directly
-  below the `<h1>` and below the release badges (`page-badges`), if any.
+  below the `<h1>`, below the release badges (`page-badges`), if any, and
+  below the doc-test "Verified" badge, which docs/single.html renders here
+  itself (`components/test-status-badge.html`). Don't call that partial from
+  an override of this slot, or the page shows two badges.
 
   DEFAULT: nothing.
 

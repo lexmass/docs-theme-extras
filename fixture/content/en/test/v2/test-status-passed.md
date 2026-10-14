@@ -1,7 +1,7 @@
 ---
 title: Test status badge (passed)
 weight: 396
-description: Renders the doc-test badge partial for a page whose test_status is passed.
+description: Renders the doc-test badge for a page whose test_status is passed.
 test_status: passed
 # Direct-path fixture (see gate-transparency.md) so auto-cards.spec.ts's child
 # count is unchanged; render:always keeps the page built for the spec to load.
@@ -10,4 +10,4 @@ build:
   render: always
 ---
 
-{{< test-status-badge-probe >}}
+The badge, if any, renders under the page title.

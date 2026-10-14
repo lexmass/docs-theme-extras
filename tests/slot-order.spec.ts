@@ -110,7 +110,9 @@ test.describe("docs/single.html prose-column slot order", () => {
     // entirely by the whitespace: a slot call moved onto its own line injects
     // a newline plus indentation into every rendered page. Pin the exact glue.
     const GLUED = [
-      `{{- end }}{{ partial "docs/under-heading.html" . }}`,
+      // The doc-test badge is not a slot, but it sits in the same glue: an
+      // empty badge must not add whitespace either.
+      `{{- end }}{{ partial "components/test-status-badge.html" . }}{{ partial "docs/under-heading.html" . }}`,
       `{{ end }}{{ partial "docs/after-title.html" . }}`,
       `{{- end }}{{ partial "docs/after-description.html" . }}`,
     ];

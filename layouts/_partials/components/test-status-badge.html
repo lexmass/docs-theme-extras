@@ -9,15 +9,11 @@
   test annotations did not attach). Neither shows a badge: a page earns it only
   when every scenario on it ran and passed.
 
-  NOT CALLED BY DEFAULT. A consumer opts in by calling it from its own
-  `layouts/partials/docs/under-heading.html`:
-
-      {{ partial "components/test-status-badge.html" . }}
-
-  It is not the slot's default because the slots must stay empty (see
-  tests/slot-order.spec.ts). It also keeps agentgateway.dev, which already
-  overrides that slot with its own copy of this badge, from rendering two
-  badges when it bumps the module.
+  CALLED BY docs/single.html, inside the heading column, just before the
+  `docs/under-heading.html` slot, so every consumer gets it with no layout
+  file. A consumer that still calls this partial (or its own copy) from an
+  `under-heading.html` override renders TWO badges, and must delete that
+  override when it bumps to this version.
 
   The tooltip text is the badge's accessible description, through
   `aria-describedby`, so screen readers announce it without needing hover. The

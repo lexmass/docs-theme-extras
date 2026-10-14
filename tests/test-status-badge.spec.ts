@@ -11,56 +11,56 @@ import { target } from "./helpers/target";
 // contract: `failed` and `partial` are real values the inject script writes,
 // and a page carrying either must NOT claim its examples were verified.
 //
-// The fixture renders the partial through a probe shortcode
-// (fixture/layouts/_shortcodes/test-status-badge-probe.html), because the real
-// call site is a consumer's `docs/under-heading.html` override and the fixture
-// cannot override module slots (see slot-order.spec.ts). The probe wrapper is
-// always emitted, so "the badge is missing" can't pass because the whole probe
-// vanished.
-//
-// Fixture-only; server-rendered markup read statically.
+// docs/single.html calls the partial directly, inside the heading column, so
+// the spec reads the badge where readers see it: after the `<h1>`, before the
+// copy/context buttons. Fixture-only; server-rendered markup read statically.
 
 const IS_FIXTURE_TARGET = target.name.startsWith("docs-theme-extras-fixture");
 
-function probePage(status: string): string {
-  return path.join(TEST_PRODUCT_ROOT, "v2", `test-status-${status}`, "index.html");
+function builtPage(status: string): string {
+  const file = path.join(TEST_PRODUCT_ROOT, "v2", `test-status-${status}`, "index.html");
+  expect(fs.existsSync(file), `fixture page not built: ${file}`).toBe(true);
+  return fs.readFileSync(file, "utf8");
 }
 
-/** The probe's inner HTML for a built page. Fails loudly when the probe is
- *  absent, so a renamed page or shortcode can't turn every check into a pass. */
-function probeBody(status: string): string {
-  const file = probePage(status);
-  expect(fs.existsSync(file), `fixture page not built: ${file}`).toBe(true);
-  const html = fs.readFileSync(file, "utf8");
-  const m = html.match(
-    new RegExp(`<div data-test-status-probe="${status}">([\\s\\S]*?)</div>`),
-  );
-  expect(m, `probe wrapper missing on test-status-${status}`).not.toBeNull();
-  return m![1];
-}
+const BADGE = 'class="test-status-badge';
 
 test.describe("doc-test Verified badge", () => {
-  test.skip(!IS_FIXTURE_TARGET, "fixture-only: renders through a fixture probe");
+  test.skip(!IS_FIXTURE_TARGET, "fixture-only: reads built fixture pages");
 
-  test("test_status: passed renders the badge with an accessible description", () => {
-    const body = probeBody("passed");
-    expect(body).toContain('class="test-status-badge test-status-passed"');
-    expect(body).toContain(">Verified</span>");
+  test("test_status: passed renders one badge, with an accessible description", () => {
+    const html = builtPage("passed");
+    expect(html.split(BADGE).length - 1, "badge count").toBe(1);
+    expect(html).toContain('class="test-status-badge test-status-passed"');
+    expect(html).toContain(">Verified</span>");
     // The tooltip is the description screen readers get, and the badge takes
     // focus so keyboard users can open it. Both halves of the reference must
     // name the same id.
-    expect(body).toContain('aria-describedby="test-status-tooltip"');
-    expect(body).toMatch(/id="test-status-tooltip" role="tooltip">Code examples on this page/);
-    expect(body).toContain('tabindex="0"');
+    expect(html).toContain('aria-describedby="test-status-tooltip"');
+    expect(html).toMatch(/id="test-status-tooltip" role="tooltip">Code examples on this page/);
+    expect(html).toContain('tabindex="0"');
+  });
+
+  test("the badge sits in the heading column, after the h1 and before the buttons", () => {
+    // Inside the heading column is what keeps the badge above the copy/context
+    // buttons when the title area stacks on a narrow viewport.
+    const html = builtPage("passed");
+    const h1 = html.indexOf('<h1 class="hx:mb-0">');
+    const badge = html.indexOf(BADGE);
+    const buttons = html.indexOf('<div class="hx:flex hx:items-center hx:gap-2">', h1);
+    expect(h1, "h1 missing").toBeGreaterThan(-1);
+    expect(buttons, "button row missing").toBeGreaterThan(-1);
+    expect(badge).toBeGreaterThan(h1);
+    expect(badge).toBeLessThan(buttons);
   });
 
   test("test_status: failed renders nothing", () => {
-    expect(probeBody("failed").trim()).toBe("");
+    expect(builtPage("failed")).not.toContain(BADGE);
   });
 
-  test("no page without the probe renders a badge", () => {
-    // The partial is opt-in. If it ever became a slot default, every fixture
-    // page would sprout one, and this is where that shows up.
+  test("no page without test_status: passed renders a badge", () => {
+    // The badge is built in, so a loosened gate would put it on every page.
+    // This is where that shows up.
     const offenders: string[] = [];
     const walk = (d: string) => {
       for (const e of fs.readdirSync(d, { withFileTypes: true })) {
@@ -68,8 +68,8 @@ test.describe("doc-test Verified badge", () => {
         if (e.isDirectory()) walk(full);
         else if (
           e.name.endsWith(".html") &&
-          !full.includes(`${path.sep}test-status-`) &&
-          fs.readFileSync(full, "utf8").includes('class="test-status-badge')
+          !full.includes(`${path.sep}test-status-passed${path.sep}`) &&
+          fs.readFileSync(full, "utf8").includes(BADGE)
         )
           offenders.push(path.relative(target.builtRoot, full));
       }
