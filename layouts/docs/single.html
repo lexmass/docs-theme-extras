@@ -12,8 +12,9 @@
     docs/width-class.html      wrapper max-width class (default:
                                `hextra-max-page-width`)
     docs/content-class.html    <main> width + padding classes
-    docs/under-heading.html    INSIDE the heading column, below the <h1> and
-                               the release badges (default: nothing)
+    docs/under-heading.html    INSIDE the heading column, below the <h1>, the
+                               release badges and the doc-test badge (default:
+                               nothing)
     docs/after-title.html      between the <h1> block and the page description
                                (default: nothing)
     docs/after-description.html  between the page description and `.Content`
@@ -36,6 +37,19 @@
   the module gains afterwards. That is how `page-description` came to be missing
   from 933 kgateway.dev pages, along with `version-banner`, `page-badges`,
   `components/page-context-menu` and the `displayPagination` guard.
+
+  NOT A SLOT: `components/test-status-badge.html`, the doc-test "Verified"
+  badge, is called directly, just before `under-heading`. It renders only for
+  `test_status: passed`, which no committed page carries (CI injects it), so it
+  is empty everywhere else and keeps the guarantee below.
+
+  The `under-heading` slot is rendered FIRST, into `$under`, and the badge is
+  skipped when that output already contains `test-status-badge`. Before this
+  module shipped the badge, consumers rendered one from an `under-heading`
+  override (the docs hub through this same partial, agentgateway.dev through
+  its own copy with the same class names). Without the check, those sites show
+  two badges until they delete the override; with it, the bump is safe on its
+  own. The rendered order is unchanged: badge, then the slot's output.
 
   Every slot call below is placed so that an empty slot produces BYTE-IDENTICAL
   output to the pre-slot layout. That is verified, not assumed: adding them left
@@ -67,7 +81,7 @@
                 {{- if .Params.oss }}<span class="section-card-badge badge-oss">Open Source</span>{{ end -}}
                 {{- if .Params.experimental }}<span class="section-card-badge badge-tag">Experimental</span>{{ end -}}
               </div>
-              {{- end }}{{ partial "docs/under-heading.html" . }}
+              {{- end }}{{ $under := partial "docs/under-heading.html" . }}{{ if not (strings.Contains $under "test-status-badge") }}{{ partial "components/test-status-badge.html" . }}{{ end }}{{ $under }}
             </div>
             <div class="hx:flex hx:items-center hx:gap-2">
               {{ partial "copy-markdown.html" . }}

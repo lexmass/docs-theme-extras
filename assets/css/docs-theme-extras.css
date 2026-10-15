@@ -3184,3 +3184,131 @@ a[class*="word-break:break-word"] {
    and still drives one thing: an icon'd entry goes to full opacity at
    `.section-dropdown-item-active .section-dropdown-icon` above. Do not delete the
    class along with its weight. */
+
+/* ── Doc-test "Verified" badge ───────────────────────────────────────── */
+/* Markup: layouts/_partials/components/test-status-badge.html, which
+   docs/single.html renders in the heading column, under the <h1> and the
+   release badges. Ported from agentgateway.dev's custom.css, where the badge
+   started; the class names are unchanged, and single.html relies on
+   `test-status-badge` to spot a consumer override that still renders its own
+   copy.
+
+   Block-level (flex), not inline-flex. As an inline box the badge sat in an
+   anonymous line box whose height was floored by the parent's line-height, so
+   margin-top could barely move it. It is the only thing on its line under the
+   <h1>, so nothing needs it inline. */
+.test-status-badge {
+  position: relative;
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  /* No margin-bottom: the gap before the description goes on the title row
+     (the :has() rule below), so it lands after the LAST thing in that row.
+     On a narrow viewport the row stacks and that is the Copy as Markdown
+     button, not the badge. */
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  letter-spacing: 0.03em;
+  transition: transform 0.2s ease;
+  cursor: default;
+}
+/* Scoped by :has() so a page without a badge keeps Hextra's stock hx:mb-4.
+   Specificity (0,2,1) beats Tailwind's (0,1,0) without !important. */
+.content > div:has(.test-status-badge) { margin-bottom: 1.75rem; }
+
+.test-status-passed { color: #111827; }
+.test-status-passed:hover { transform: translateY(-1px); }
+.test-status-passed:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+.test-status-passed .test-status-icon { fill: #059669; }
+.dark .test-status-passed { color: #f9fafb; border-color: #9ca3af; }
+.dark .test-status-passed .test-status-icon { fill: #34d399; }
+
+.test-status-icon { width: 0.7rem; height: 0.7rem; flex-shrink: 0; }
+.test-status-text { white-space: nowrap; }
+/* The explanation for screen readers. Visually hidden, not display:none or
+   visibility:hidden, which would drop it from the accessibility tree. The
+   tooltip below draws the same text and is aria-hidden. */
+.test-status-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.test-status-tooltip {
+  position: absolute;
+  /* Anchored to the badge's left edge and allowed to wrap. agentgateway.dev's
+     version centred one unwrapped line (about 420px) on a badge that sits at
+     the left margin, so on a phone half of it hung off the screen. */
+  left: 0;
+  top: 100%;
+  transform: translateY(8px);
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.5rem 0.75rem;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: normal;
+  white-space: normal;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+  z-index: 50;
+  /* No pointer-events: none. WCAG 1.4.13 needs the pointer to be able to move
+     onto the tooltip without it closing. The tooltip is a child of the badge,
+     so hovering it keeps the badge's :hover; the ::after bridge below covers
+     the gap between them. While hidden, visibility:hidden already stops it
+     catching the pointer. */
+  cursor: default;
+}
+/* Transparent strip over the gap between the badge and the tooltip, so the
+   pointer never leaves the badge's hover area on its way down. */
+.test-status-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 0.75rem;
+}
+.test-status-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 1rem;
+  border: 6px solid transparent;
+  border-bottom-color: #1f2937;
+}
+/* Focus as well as hover, so the tooltip is reachable from the keyboard. */
+.test-status-badge:hover .test-status-tooltip,
+.test-status-badge:focus-visible .test-status-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(6px);
+}
+/* Esc closes the tooltip (WCAG 1.4.13, dismissible). assets/js/docs-init.js
+   adds this class on Esc and removes it once the pointer and focus have both
+   left the badge. Same specificity as the rule above and later, so it wins. */
+.test-status-badge.test-status-dismissed .test-status-tooltip {
+  opacity: 0;
+  visibility: hidden;
+}
+.dark .test-status-tooltip { background: #374151; color: #f3f4f6; }
+.dark .test-status-tooltip::before { border-bottom-color: #374151; }

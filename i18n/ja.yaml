@@ -3,3 +3,7 @@
 # Accessible names for the navigation landmarks.
 mainNavigation: メイン
 docsNavigation: ドキュメント
+
+# Doc-test badge (components/test-status-badge.html).
+testStatusVerified: 検証済み
+testStatusVerifiedTooltip: このページのコード例は自動テストで検証済みです。

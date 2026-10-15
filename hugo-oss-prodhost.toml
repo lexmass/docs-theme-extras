@@ -1,0 +1,26 @@
+# A HOST-LESS SITE WITH prodHost SET — the shape of kgateway.dev,
+# agentgateway.dev, and ambientmesh.io.
+#
+# An OVERLAY on the versioned OSS fixture, changing only publishDir and the
+# param under test:
+#
+#   hugo --config hugo-oss.toml,hugo-oss-prodhost.toml
+#
+# Those sites keep baseURL "/" so canonifyURLs does not point preview
+# deployments at production, and set themeExtras.prodHost to their real host.
+# Hugo's own sitemap then lists root-relative URLs, which the sitemap protocol
+# does not allow; layouts/sitemap.xml prepends prodHost to them. hugo-oss.toml
+# alone cannot show that, because it sets no prodHost, so its sitemap must stay
+# exactly Hugo's — and tests/sitemap-absolute.spec.ts asserts both builds, so
+# the fix and its fail-safe are compared in one place.
+#
+# The host is a reserved example domain so nothing in the output can be
+# mistaken for, or resolve to, a real site.
+#
+# Built by `make build-prodhost`; asserted by tests/sitemap-absolute.spec.ts.
+# Reads public-oss-prodhost/ directly rather than through DOCS_TEST_CONFIG.
+publishDir = "public-oss-prodhost/test"
+
+[params]
+  [params.themeExtras]
+    prodHost = "https://docs.example.com"

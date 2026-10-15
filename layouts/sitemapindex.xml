@@ -1,0 +1,26 @@
+{{ printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" | safeHTML }}
+{{- /*
+  COPY of Hugo v0.160.1's embedded sitemapindex.xml
+  (tpl/tplimpl/embedded/templates/sitemapindex.xml). Hugo writes it at the
+  site root of a MULTILINGUAL site, one <sitemap> per language. The only
+  change: .SitemapAbsURL goes through utils/abs-permalink.html, for the same
+  reason as layouts/sitemap.xml. Without it a host-less multilingual site
+  lists `<loc>/en/sitemap.xml</loc>`, which crawlers ignore, so they never
+  reach the per-language sitemaps either. On any other site the output is
+  byte-identical to Hugo's.
+
+  Re-sync on a Hugo bump the same way as layouts/sitemap.xml, against
+  tests/helpers/hugo-embedded/v<version>/sitemapindex.xml; tests/sitemap-sync.spec.ts
+  checks both.
+*/ -}}
+{{- $host := partial "utils/prod-host.html" . }}
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  {{ range . }}
+  <sitemap>
+    <loc>{{ partial "utils/abs-permalink.html" (dict "url" .SitemapAbsURL "host" $host) }}</loc>
+    {{ if not .Lastmod.IsZero }}
+      <lastmod>{{ .Lastmod.Format "2006-01-02T15:04:05-07:00" | safeHTML }}</lastmod>
+    {{ end }}
+  </sitemap>
+  {{ end }}
+</sitemapindex>

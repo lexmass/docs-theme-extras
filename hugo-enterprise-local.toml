@@ -37,17 +37,20 @@ enableInlineShortcodes = true
     path = "github.com/imfing/hextra"
     disable = false
 
+  # Fixture's consumer-side layout overrides — see hugo-oss.toml comment.
+  # Mounted BEFORE the module's own layouts/ so a fixture file wins over a
+  # module file at the same path, the way a consumer's project layouts do.
+  # Only fixture/layouts/partials/docs/under-heading.html relies on it.
+  [[module.mounts]]
+    source = "fixture/layouts"
+    target = "layouts"
+
   # Surface fixture/assets and fixture/static into Hugo's standard locations
   # for the self-test build. The fixture stays under fixture/ so it isn't
   # exposed to consumers that import this module via go.mod — they only see
   # top-level layouts/.
   [[module.mounts]]
     source = "layouts"
-    target = "layouts"
-
-  # Fixture's consumer-side layout overrides — see hugo-oss.toml comment.
-  [[module.mounts]]
-    source = "fixture/layouts"
     target = "layouts"
 
   # Module's own CSS/JS overlay (custom.css drives version-dropdown,

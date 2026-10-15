@@ -1,0 +1,13 @@
+{{- /*
+  FIXTURE-ONLY override of the docs/under-heading.html slot, standing in for a
+  consumer that rendered the doc-test badge from this slot before the module
+  shipped it (agentgateway.dev's own copy, the docs hub on 0.3.18-beta.1).
+
+  Renders only on a page with `fixture_legacy_badge: true`, so every other
+  fixture page gets the module's empty slot. tests/test-status-badge.spec.ts
+  uses it to prove docs/single.html then drops its own badge, leaving one.
+  The `data-fixture` marker tells the two copies apart.
+*/ -}}
+{{- if .Params.fixture_legacy_badge -}}
+<span class="test-status-badge test-status-passed" data-fixture="legacy-override">Verified</span>
+{{- end -}}

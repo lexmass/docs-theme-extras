@@ -62,10 +62,13 @@
   </title>
   <meta name="description" content="{{ partial "utils/page-description.html" . }}" />
 
+  {{- /* Through utils/abs-permalink.html so a host-less site (baseURL "/")
+         that sets themeExtras.prodHost still gets an absolute canonical URL.
+         Unchanged on every other site; see that partial. */ -}}
   {{- with .Params.canonical -}}
     <link rel="canonical" href="{{ . }}" itemprop="url" />
   {{- else -}}
-    <link rel="canonical" href="{{ .Permalink }}" itemprop="url" />
+    <link rel="canonical" href="{{ partial "utils/abs-permalink.html" (dict "url" .Permalink "host" (partial "utils/prod-host.html" .)) }}" itemprop="url" />
   {{- end -}}
 
   {{- partial "opengraph.html" . -}}

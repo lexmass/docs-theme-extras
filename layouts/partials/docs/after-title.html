@@ -5,9 +5,11 @@
   DEFAULT: nothing.
 
   Exists for per-page status furniture that belongs with the title rather than
-  with the body. agentgateway.dev uses it for `test-status-badge.html`, which
+  with the body. agentgateway.dev first used it for its doc-test badge, which
   was the last thing keeping its `docs/single.html` a fork after the chrome
-  slots covered everything else.
+  slots covered everything else. That badge moved to `under-heading.html` in
+  0.3.8 and is now built into `docs/single.html`
+  (`components/test-status-badge.html`), so no consumer needs a slot for it.
 
   POSITION CHANGED IN 0.3.8. Until then this slot rendered AFTER the
   description, which is not what its name says and not where the agentgateway
