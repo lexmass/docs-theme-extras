@@ -24,7 +24,7 @@ deliberately, one PR at a time. Never use floating refs in production hugo confi
 
 ---
 
-## [Unreleased]
+## [0.3.18] — 2026-10-15
 
 ### Add — built-in doc-test "Verified" badge (`layouts/_partials/components/test-status-badge.html`, `layouts/docs/single.html`, `assets/css/docs-theme-extras.css`, `tests/test-status-badge.spec.ts`, `playwright.config.ts`)
 
