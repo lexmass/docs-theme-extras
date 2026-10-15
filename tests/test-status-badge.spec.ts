@@ -13,7 +13,10 @@ import { target } from "./helpers/target";
 //
 // docs/single.html calls the partial directly, inside the heading column, so
 // the spec reads the badge where readers see it: after the `<h1>`, before the
-// copy/context buttons. Fixture-only; server-rendered markup read statically.
+// copy/context buttons. It skips that call when the under-heading slot already
+// prints a badge (a consumer's pre-0.3.18 override), so the page never shows
+// two. fixture/layouts/partials/docs/under-heading.html plays that consumer.
+// Fixture-only; server-rendered markup read statically.
 
 const IS_FIXTURE_TARGET = target.name.startsWith("docs-theme-extras-fixture");
 
@@ -28,17 +31,26 @@ const BADGE = 'class="test-status-badge';
 test.describe("doc-test Verified badge", () => {
   test.skip(!IS_FIXTURE_TARGET, "fixture-only: reads built fixture pages");
 
-  test("test_status: passed renders one badge, with an accessible description", () => {
+  test("test_status: passed renders one badge, readable without hover", () => {
     const html = builtPage("passed");
     expect(html.split(BADGE).length - 1, "badge count").toBe(1);
     expect(html).toContain('class="test-status-badge test-status-passed"');
     expect(html).toContain(">Verified</span>");
-    // The tooltip is the description screen readers get, and the badge takes
-    // focus so keyboard users can open it. Both halves of the reference must
-    // name the same id.
-    expect(html).toContain('aria-describedby="test-status-tooltip"');
-    expect(html).toMatch(/id="test-status-tooltip" role="tooltip">Code examples on this page/);
+    // The explanation is real text in the badge, hidden only visually, so a
+    // screen reader gets it in browse mode and on focus. The tooltip draws the
+    // same text and is aria-hidden so it is not read twice.
+    expect(html).toMatch(/class="test-status-sr">: Code examples on this page/);
+    expect(html).toMatch(/class="test-status-tooltip" aria-hidden="true">Code examples on this page/);
+    // Focusable, so keyboard users can open the tooltip.
     expect(html).toContain('tabindex="0"');
+  });
+
+  test("a slot override that already prints a badge leaves exactly one", () => {
+    const html = builtPage("legacy-override");
+    expect(html.split(BADGE).length - 1, "badge count").toBe(1);
+    expect(html, "the override's badge should be the one kept").toContain(
+      'data-fixture="legacy-override"',
+    );
   });
 
   test("the badge sits in the heading column, after the h1 and before the buttons", () => {
@@ -69,6 +81,7 @@ test.describe("doc-test Verified badge", () => {
         else if (
           e.name.endsWith(".html") &&
           !full.includes(`${path.sep}test-status-passed${path.sep}`) &&
+          !full.includes(`${path.sep}test-status-legacy-override${path.sep}`) &&
           fs.readFileSync(full, "utf8").includes(BADGE)
         )
           offenders.push(path.relative(target.builtRoot, full));
@@ -82,7 +95,13 @@ test.describe("doc-test Verified badge", () => {
     const css = path.join(TEST_PRODUCT_ROOT, "css", "docs-theme-extras.css");
     expect(fs.existsSync(css), `built stylesheet missing: ${css}`).toBe(true);
     const src = fs.readFileSync(css, "utf8");
-    for (const sel of [".test-status-badge", ".test-status-tooltip", ".dark .test-status-passed"]) {
+    for (const sel of [
+      ".test-status-badge",
+      ".test-status-tooltip",
+      ".test-status-sr",
+      ".test-status-dismissed",
+      ".dark .test-status-passed",
+    ]) {
       expect(src, `${sel} missing from docs-theme-extras.css`).toContain(sel);
     }
   });

@@ -6,3 +6,8 @@
 # "Main navigation" and "Docs navigation" in its landmark list.
 mainNavigation: Main
 docsNavigation: Docs
+
+# Doc-test badge (components/test-status-badge.html): the badge label, and the
+# explanation shown in its tooltip and read by screen readers.
+testStatusVerified: Verified
+testStatusVerifiedTooltip: Code examples on this page have been automatically tested and verified.

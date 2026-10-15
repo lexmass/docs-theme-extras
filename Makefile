@@ -10,7 +10,7 @@ CONFIG  ?=
         clear-cache \
         server-oss server-enterprise server-docs \
         build-oss build-enterprise build-flat build-nosections build-docs \
-        build-section-title build-section-current build-nobook build-devpath build-prodhost \
+        build-section-title build-section-current build-nobook build-devpath build-prodhost build-sitemap-i18n \
         test-oss test-enterprise test-all \
         test clean help
 
@@ -189,6 +189,12 @@ build-section-current:
 build-prodhost:
 	$(HUGO) --config hugo-oss.toml,hugo-oss-prodhost.toml --gc 2> .build-oss-prodhost.log
 
+# THE ONLY MULTILINGUAL BUILD: the sitemap's hreflang alternates and the root
+# sitemapindex.xml run only on a site with translations. Standalone and tiny;
+# see hugo-sitemap-i18n.toml. Its "found no layout file" warnings are expected.
+build-sitemap-i18n:
+	$(HUGO) --config hugo-sitemap-i18n.toml --gc 2> .build-sitemap-i18n.log
+
 # ── Tests against the bundled fixture ────────────────────────────────────
 
 # build-flat runs alongside each brand build so section-versionless.spec.ts has
@@ -202,10 +208,10 @@ build-prodhost:
 # other job — and dev-subpath-baseurl.spec.ts, like every spec here, SKIPS on a
 # missing build rather than failing. Dropping it from one target would have cost
 # nothing visible and half the coverage.
-test-oss: build-oss build-devpath build-flat build-nosections build-section-title build-section-current build-nobook build-prodhost
+test-oss: build-oss build-devpath build-flat build-nosections build-section-title build-section-current build-nobook build-prodhost build-sitemap-i18n
 	DOCS_TEST_CONFIG=$(abspath ./fixture/.docs-test-oss.toml) npx playwright test
 
-test-enterprise: build-enterprise build-devpath build-flat build-nosections build-section-title build-section-current build-nobook build-prodhost
+test-enterprise: build-enterprise build-devpath build-flat build-nosections build-section-title build-section-current build-nobook build-prodhost build-sitemap-i18n
 	DOCS_TEST_CONFIG=$(abspath ./fixture/.docs-test-enterprise.toml) npx playwright test
 
 # Run both brand variants. CI default — surfaces brand-specific regressions

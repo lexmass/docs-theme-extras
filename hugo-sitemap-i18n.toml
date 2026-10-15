@@ -1,0 +1,49 @@
+# A MULTILINGUAL, HOST-LESS SITE WITH prodHost SET — the only fixture build
+# with more than one language.
+#
+# Exists for the two sitemap paths only a multilingual site runs: the hreflang
+# alternates in layouts/sitemap.xml, which Hugo writes only for a page that has
+# translations, and layouts/sitemapindex.xml, which Hugo writes at the root of
+# a multilingual site instead of a single sitemap. Every other fixture build is
+# monolingual, so without this one neither runs in CI and a root-relative URL
+# would ship unseen. tests/sitemap-absolute.spec.ts asserts the index, the
+# <loc> entries, and the alternates all carry prodHost.
+#
+# STANDALONE, not an overlay on hugo-oss.toml: adding a language to the main
+# fixture would shift every page URL the rest of the suite asserts on (see
+# tests/language-switch.spec.ts). No Hextra import and no page layouts are
+# mounted, only the sitemap template and the partials it calls, so Hugo
+# renders no HTML pages here. It still builds every page, with its permalink,
+# which is all the sitemap needs. The "found no layout file" warnings that
+# produces are expected.
+#
+# Built by `make build-sitemap-i18n` into public-sitemap-i18n/.
+baseURL = "/"
+title = "Sitemap i18n fixture"
+defaultContentLanguage = "en"
+defaultContentLanguageInSubdir = false
+publishDir = "public-sitemap-i18n"
+disableKinds = ["taxonomy", "term", "RSS", "robotsTXT", "404"]
+
+[languages]
+  [languages.en]
+    weight = 1
+    contentDir = "fixture/content-i18n/en"
+  [languages.ja]
+    weight = 2
+    contentDir = "fixture/content-i18n/ja"
+
+[module]
+  [[module.mounts]]
+    source = "layouts/sitemap.xml"
+    target = "layouts/sitemap.xml"
+  [[module.mounts]]
+    source = "layouts/sitemapindex.xml"
+    target = "layouts/sitemapindex.xml"
+  [[module.mounts]]
+    source = "layouts/partials/utils"
+    target = "layouts/partials/utils"
+
+[params]
+  [params.themeExtras]
+    prodHost = "https://docs.example.com"

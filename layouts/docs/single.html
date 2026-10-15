@@ -43,6 +43,14 @@
   `test_status: passed`, which no committed page carries (CI injects it), so it
   is empty everywhere else and keeps the guarantee below.
 
+  The `under-heading` slot is rendered FIRST, into `$under`, and the badge is
+  skipped when that output already contains `test-status-badge`. Before this
+  module shipped the badge, consumers rendered one from an `under-heading`
+  override (the docs hub through this same partial, agentgateway.dev through
+  its own copy with the same class names). Without the check, those sites show
+  two badges until they delete the override; with it, the bump is safe on its
+  own. The rendered order is unchanged: badge, then the slot's output.
+
   Every slot call below is placed so that an empty slot produces BYTE-IDENTICAL
   output to the pre-slot layout. That is verified, not assumed: adding them left
   all 8 docs-hub products and the fixture unchanged. If you edit this file, keep
@@ -73,7 +81,7 @@
                 {{- if .Params.oss }}<span class="section-card-badge badge-oss">Open Source</span>{{ end -}}
                 {{- if .Params.experimental }}<span class="section-card-badge badge-tag">Experimental</span>{{ end -}}
               </div>
-              {{- end }}{{ partial "components/test-status-badge.html" . }}{{ partial "docs/under-heading.html" . }}
+              {{- end }}{{ $under := partial "docs/under-heading.html" . }}{{ if not (strings.Contains $under "test-status-badge") }}{{ partial "components/test-status-badge.html" . }}{{ end }}{{ $under }}
             </div>
             <div class="hx:flex hx:items-center hx:gap-2">
               {{ partial "copy-markdown.html" . }}

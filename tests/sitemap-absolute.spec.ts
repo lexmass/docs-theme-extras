@@ -22,6 +22,16 @@ import path from "node:path";
 // The last three are the fail-safe: a site that sets no prodHost, or whose
 // baseURL already names a host, must get Hugo's output byte for byte.
 //
+// A FIFTH BUILD, public-sitemap-i18n (hugo-sitemap-i18n.toml), is the only
+// multilingual one. It runs the two paths a monolingual site never reaches:
+// the hreflang alternates, and sitemapindex.xml, which Hugo writes at the root
+// of a multilingual site in place of a single sitemap.
+//
+// The same host-less sites also emitted root-relative canonical and og:url
+// tags, from .Permalink in head.html and opengraph.html. Those go through the
+// same partial now, so the last block checks them on the prodhost and plain
+// builds.
+//
 // Each build SKIPS when absent, like every spec here, so a target that does
 // not build it reports a skip rather than a failure.
 
@@ -34,6 +44,8 @@ const BUILDS = {
   devpath: path.join(REPO, "public-oss-devpath", "test", "sitemap.xml"),
   protorel: path.join(REPO, "public-oss-protorel", "test", "sitemap.xml"),
 };
+
+const I18N = path.join(REPO, "public-sitemap-i18n"); // hugo-sitemap-i18n.toml
 
 // Every URL the sitemap publishes: <loc> entries and hreflang alternates.
 function sitemapUrls(file: string): string[] {
@@ -73,5 +85,53 @@ test.describe("sitemap URLs", () => {
     test.skip(!fs.existsSync(BUILDS.protorel), "protorel build not present (make build-devpath)");
     const urls = sitemapUrls(BUILDS.protorel);
     expectAll(urls, "//localhost:1313", "a protocol-relative URL was rewritten");
+  });
+});
+
+test.describe("multilingual sitemap URLs", () => {
+  test.skip(!fs.existsSync(I18N), "i18n build not present (make build-sitemap-i18n)");
+
+  test("the root sitemap index lists each language's sitemap on prodHost", () => {
+    const xml = fs.readFileSync(path.join(I18N, "sitemap.xml"), "utf8");
+    expect(xml, "the root sitemap.xml is not an index").toContain("<sitemapindex");
+    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    expect(locs).toEqual([`${HOST}/en/sitemap.xml`, `${HOST}/ja/sitemap.xml`]);
+  });
+
+  for (const lang of ["en", "ja"]) {
+    test(`${lang}: every <loc> and hreflang alternate is on prodHost`, () => {
+      const file = path.join(I18N, lang, "sitemap.xml");
+      const xml = fs.readFileSync(file, "utf8");
+      // Without alternates the branch this build exists for never ran.
+      expect(xml, "no hreflang alternates: the pages lost their translations").toContain(
+        'hreflang="',
+      );
+      expectAll(sitemapUrls(file), `${HOST}/`, "prodHost was not prepended");
+    });
+  }
+});
+
+test.describe("canonical and og:url", () => {
+  // Any page will do; this one is in every OSS-fixture build.
+  const page = (root: string) => path.join(REPO, root, "test", "v2", "index.html");
+  const tags = (html: string) => ({
+    canonical: html.match(/<link rel="?canonical"? href="?([^"\s>]+)/)?.[1],
+    ogUrl: html.match(/<meta property="?og:url"? content="?([^"\s>]+)/)?.[1],
+  });
+
+  test("host-less site with prodHost: both are absolute on prodHost", () => {
+    const file = page("public-oss-prodhost");
+    test.skip(!fs.existsSync(file), "prodhost build not present (make build-prodhost)");
+    const t = tags(fs.readFileSync(file, "utf8"));
+    expect(t.canonical).toBe(`${HOST}/test/v2/`);
+    expect(t.ogUrl).toBe(`${HOST}/test/v2/`);
+  });
+
+  test("no prodHost: both stay as Hugo writes them", () => {
+    const file = page("public-oss");
+    test.skip(!fs.existsSync(file), "OSS fixture build not present");
+    const t = tags(fs.readFileSync(file, "utf8"));
+    expect(t.canonical).toBe("/test/v2/");
+    expect(t.ogUrl).toBe("/test/v2/");
   });
 });

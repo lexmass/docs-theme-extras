@@ -3186,15 +3186,17 @@ a[class*="word-break:break-word"] {
    class along with its weight. */
 
 /* ── Doc-test "Verified" badge ───────────────────────────────────────── */
-/* Markup: layouts/_partials/components/test-status-badge.html, which a
-   consumer calls from its `docs/under-heading.html` slot. Ported from
-   agentgateway.dev's custom.css, where the badge started; the class names are
-   unchanged so that site can drop its copy when it adopts this one.
+/* Markup: layouts/_partials/components/test-status-badge.html, which
+   docs/single.html renders in the heading column, under the <h1> and the
+   release badges. Ported from agentgateway.dev's custom.css, where the badge
+   started; the class names are unchanged, and single.html relies on
+   `test-status-badge` to spot a consumer override that still renders its own
+   copy.
 
    Block-level (flex), not inline-flex. As an inline box the badge sat in an
    anonymous line box whose height was floored by the parent's line-height, so
-   margin-top could barely move it. The slot already puts it on its own line
-   under the <h1>, so nothing needs it inline. */
+   margin-top could barely move it. It is the only thing on its line under the
+   <h1>, so nothing needs it inline. */
 .test-status-badge {
   position: relative;
   display: flex;
@@ -3230,6 +3232,20 @@ a[class*="word-break:break-word"] {
 
 .test-status-icon { width: 0.7rem; height: 0.7rem; flex-shrink: 0; }
 .test-status-text { white-space: nowrap; }
+/* The explanation for screen readers. Visually hidden, not display:none or
+   visibility:hidden, which would drop it from the accessibility tree. The
+   tooltip below draws the same text and is aria-hidden. */
+.test-status-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 .test-status-tooltip {
   position: absolute;
@@ -3255,7 +3271,22 @@ a[class*="word-break:break-word"] {
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
   z-index: 50;
-  pointer-events: none;
+  /* No pointer-events: none. WCAG 1.4.13 needs the pointer to be able to move
+     onto the tooltip without it closing. The tooltip is a child of the badge,
+     so hovering it keeps the badge's :hover; the ::after bridge below covers
+     the gap between them. While hidden, visibility:hidden already stops it
+     catching the pointer. */
+  cursor: default;
+}
+/* Transparent strip over the gap between the badge and the tooltip, so the
+   pointer never leaves the badge's hover area on its way down. */
+.test-status-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 0.75rem;
 }
 .test-status-tooltip::before {
   content: '';
@@ -3271,6 +3302,13 @@ a[class*="word-break:break-word"] {
   opacity: 1;
   visibility: visible;
   transform: translateY(6px);
+}
+/* Esc closes the tooltip (WCAG 1.4.13, dismissible). assets/js/docs-init.js
+   adds this class on Esc and removes it once the pointer and focus have both
+   left the badge. Same specificity as the rule above and later, so it wins. */
+.test-status-badge.test-status-dismissed .test-status-tooltip {
+  opacity: 0;
+  visibility: hidden;
 }
 .dark .test-status-tooltip { background: #374151; color: #f3f4f6; }
 .dark .test-status-tooltip::before { border-bottom-color: #374151; }

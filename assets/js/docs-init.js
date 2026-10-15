@@ -541,3 +541,37 @@ document.addEventListener('DOMContentLoaded', function(){
   })();
 
 });
+
+/* ── Doc-test badge: Esc closes the tooltip ─────────────────────────────────
+   WCAG 1.4.13 asks that content shown on hover or focus can be dismissed
+   without moving the pointer or focus. The tooltip is CSS-only
+   (`.test-status-badge:hover / :focus-visible`), so Esc adds
+   `test-status-dismissed`, which hides it until the pointer AND focus have
+   both left the badge, the same rule as the navbar dropdowns above. Delegated,
+   like those, so it costs nothing on a page without a badge.
+   Markup: layouts/_partials/components/test-status-badge.html. */
+(function(){
+  function badgeOf(el){
+    return el && el.closest ? el.closest('.test-status-badge') : null;
+  }
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.test-status-badge').forEach(function(b){
+      if (b.matches(':hover') || b.contains(document.activeElement)) {
+        b.classList.add('test-status-dismissed');
+      }
+    });
+  });
+  document.addEventListener('focusout', function(e){
+    var b = badgeOf(e.target);
+    if (!b || !b.classList.contains('test-status-dismissed')) return;
+    if (b.contains(e.relatedTarget) || b.matches(':hover')) return;
+    b.classList.remove('test-status-dismissed');
+  });
+  document.addEventListener('mouseout', function(e){
+    var b = badgeOf(e.target);
+    if (!b || !b.classList.contains('test-status-dismissed')) return;
+    if (b.contains(e.relatedTarget) || b.contains(document.activeElement)) return;
+    b.classList.remove('test-status-dismissed');
+  });
+})();

@@ -62,8 +62,10 @@ test.describe("docs/single.html prose-column slot order", () => {
       ["the <h1> itself", /<h1 class="hx:mb-0">/],
       ["the release badges", /<div class="page-badges">/],
       [
+        // Rendered into $under first, so single.html can drop its own badge
+        // when an override already prints one; $under is output right after.
         "docs/under-heading.html",
-        /\{\{ partial "docs\/under-heading\.html" \. \}\}/,
+        /\{\{ \$under := partial "docs\/under-heading\.html" \. \}\}/,
       ],
       ["docs/after-title.html", /\{\{ partial "docs\/after-title\.html" \. \}\}/],
       ["the page description", /<p class="page-description">/],
@@ -111,8 +113,10 @@ test.describe("docs/single.html prose-column slot order", () => {
     // a newline plus indentation into every rendered page. Pin the exact glue.
     const GLUED = [
       // The doc-test badge is not a slot, but it sits in the same glue: an
-      // empty badge must not add whitespace either.
-      `{{- end }}{{ partial "components/test-status-badge.html" . }}{{ partial "docs/under-heading.html" . }}`,
+      // empty badge must not add whitespace either. The slot renders into
+      // $under first so the badge can be skipped when the slot already holds
+      // one (see the header of single.html).
+      `{{- end }}{{ $under := partial "docs/under-heading.html" . }}{{ if not (strings.Contains $under "test-status-badge") }}{{ partial "components/test-status-badge.html" . }}{{ end }}{{ $under }}`,
       `{{ end }}{{ partial "docs/after-title.html" . }}`,
       `{{- end }}{{ partial "docs/after-description.html" . }}`,
     ];

@@ -7,14 +7,20 @@
   site whose baseURL already carries a host, or that sets no prodHost, the
   output is byte-identical to Hugo's.
 
-  Re-sync on a Hugo bump: diff this file against the embedded template at the
-  new version and carry over any change outside the three permalink calls.
-  tests/sitemap-absolute.spec.ts holds the behavior, not the copy.
+  Re-sync on a Hugo bump: vendor the embedded template at the new version as
+  tests/helpers/hugo-embedded/v<version>/sitemap.xml, carry any change into
+  this file outside the three permalink calls, and update the version in the
+  first line of this comment. tests/sitemap-sync.spec.ts fails until the copy,
+  the vendored file, and the HUGO_VERSION CI pins all agree;
+  tests/sitemap-absolute.spec.ts holds the behavior.
 
-  Not overridden: sitemapindex.xml, which Hugo uses only for a multilingual
-  site. Every host-less consumer is monolingual today; a host-less site that
-  adds a language would get root-relative URLs in its index until that
-  template gets the same change.
+  `.Language.Locale` (in the hreflang alternates) exists from Hugo 0.158.0;
+  older versions used `.Language.LanguageCode`. It runs only for a page with
+  translations, so a monolingual site builds on any Hugo, but a multilingual
+  consumer needs 0.158.0 or newer.
+
+  sitemapindex.xml, which Hugo writes at the root of a multilingual site, gets
+  the same change in layouts/sitemapindex.xml.
 */ -}}
 {{- $host := partial "utils/prod-host.html" . }}
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"

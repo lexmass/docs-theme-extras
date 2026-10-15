@@ -10,9 +10,13 @@
        partial gives every description tag one clean, markdown-free code path.
 
        The rest of this file is a byte-for-byte copy of Hextra v0.12.3's
-       `opengraph.html`. Only the `og:description` `content` changed (marked
-       below). On a Hextra bump, re-diff against upstream and re-apply just that
-       one line so we inherit any new/changed OG tags. */ -}}
+       `opengraph.html`, except the lines marked CHANGED FROM UPSTREAM:
+       `og:description`, and every URL (`og:url`, `og:image`, `og:video`),
+       which goes through utils/abs-permalink.html so a host-less site
+       (baseURL "/") that sets themeExtras.prodHost still emits the absolute
+       URLs Open Graph requires. On a Hextra bump, re-diff against upstream and
+       re-apply just those lines so we inherit any new/changed OG tags. */ -}}
+{{- $host := partial "utils/prod-host.html" . -}}
 {{/* Adapted from https://github.com/gohugoio/hugo/blob/v0.149.0/docs/layouts/_partials/opengraph/opengraph.html */}}
 
 <meta property="og:title" content="{{ .Title }}">
@@ -26,20 +30,21 @@
   {{ else }}
     website
   {{ end }}">
-<meta property="og:url" content="{{ .Permalink }}">
+{{- /* CHANGED FROM UPSTREAM: absolute on a host-less site. */}}
+<meta property="og:url" content="{{ partial "utils/abs-permalink.html" (dict "url" .Permalink "host" $host) }}">
 
 {{- with $.Params.images -}}
   {{- range first 6 . }}
     {{- with $.Resources.GetMatch . }}
       <!-- If the string matches a page resource, use that -->
-      <meta property="og:image" content="{{ .Permalink }}">
+      <meta property="og:image" content="{{ partial "utils/abs-permalink.html" (dict "url" .Permalink "host" $host) }}">
     {{- else }}
       <!-- Otherwise treat it as a site/global path -->
       {{- $image := . -}}
       {{- if hasPrefix $image "/" -}}
         {{- $image = relURL (strings.TrimPrefix "/" $image) -}}
       {{- end -}}
-      <meta property="og:image" content="{{ $image | absURL }}">
+      <meta property="og:image" content="{{ partial "utils/abs-permalink.html" (dict "url" ($image | absURL) "host" $host) }}">
     {{- end }}
   {{- end }}
 {{- else -}}
@@ -48,7 +53,7 @@
     {{- if hasPrefix $image "/" -}}
       {{- $image = relURL (strings.TrimPrefix "/" $image) -}}
     {{- end -}}
-    <meta property="og:image" content="{{ $image | absURL }}">
+    <meta property="og:image" content="{{ partial "utils/abs-permalink.html" (dict "url" ($image | absURL) "host" $host) }}">
   {{- end }}
 {{- end -}}
 
@@ -77,7 +82,7 @@
 {{ end }}
 {{- with .Params.videos }}
 {{- range . }}
-<meta property="og:video" content="{{ . | absURL }}">
+<meta property="og:video" content="{{ partial "utils/abs-permalink.html" (dict "url" (. | absURL) "host" $host) }}">
 {{ end }}
 
 {{ end }}
