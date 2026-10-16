@@ -24,6 +24,16 @@ deliberately, one PR at a time. Never use floating refs in production hugo confi
 
 ---
 
+## [0.3.19] — 2026-10-16
+
+### Fix — navbar icons from an imported site's icon data stayed black in dark mode (`layouts/_partials/utils/navbar-icon.html`, `layouts/_partials/navbar.html`, `tests/navbar-icon-color.spec.ts`, `tests/helpers/navbar-icon-color.ts`, `tests/helpers/config.ts`, `playwright.config.ts`, `docs/content/testing/_index.md`)
+
+On the docs hub's agentgateway site, the navbar GitHub icon was black on the dark navbar, with a wide gap beside it. `site.Data.icons` is merged from every module and mount, and the hub mounts agentgateway.dev's `data/icons.yaml`, whose `github` key replaced Hextra's. That icon has no `fill` (SVG paints it black) and sets `width="98" height="96"`; the navbar's injected `height=24` won over the source height, but the 98px width survived. kgateway.dev ships the same icon. Both OSS sites draw it black on purpose and swap in a `github-white` icon in dark mode, so the fix belongs in the navbar, not upstream.
+
+The navbar now renders menu icons through the new `utils/navbar-icon.html`. When the root `<svg>` sets no `fill`, it adds `fill="currentColor"`, so the icon takes the link's text color. A root that sets a fill is left alone, so stroke icons (`fill="none"`) stay outlined. It also drops `width` and `height` from the root, so the injected height and the viewBox size the icon. Both the desktop row and the mobile drawer use it. Icons that already used `currentColor`, including all of Hextra's, render the same as before.
+
+New `navbar-icon-color.spec.ts` (`content` project) catches the next one. It reads the built HTML and checks every `<svg>` in the navbar for a hardcoded `fill` or `stroke`, or a shape with no fill at all. It needs no browser, so a consumer's per-product content job runs it on the real build, which is the only build that has the imported icon data. The fixture would never have shown this bug. It samples 40 pages per build, since the navbar is the same on every page. New `navbarIconColor` toggle (default `true`) in `[checks]`. Verified against a local hub agentgateway build: on the 0.3.18 pin it fails, naming the GitHub icon, and with this branch it passes, with `fill="currentColor"` and no `width` on the GitHub `<svg>`. Takes effect when a consumer bumps its extras pin.
+
 ## [0.3.18] — 2026-10-15
 
 ### Add — built-in doc-test "Verified" badge (`layouts/_partials/components/test-status-badge.html`, `layouts/docs/single.html`, `assets/css/docs-theme-extras.css`, `assets/js/docs-init.js`, `i18n/en.yaml`, `i18n/ja.yaml`, `tests/test-status-badge.spec.ts`, `tests/test-status-tooltip.spec.ts`, `playwright.config.ts`)

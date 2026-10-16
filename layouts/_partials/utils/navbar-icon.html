@@ -1,0 +1,42 @@
+{{- /*
+  navbar-icon.html — render a navbar menu icon from site.Data.icons so it
+  follows the theme.
+
+  Input dict:
+    name        string — the menu entry's `params.icon`. Required.
+    attributes  string — extra attributes for the <svg>, same as Hextra's
+                         utils/icon.html (`height=24`, a class, …).
+
+  WHY THIS EXISTS: the icon key a menu entry names is not always the theme's.
+  site.Data.icons is merged from every module and mount, so a consumer that pulls
+  in an OSS site's data/ gets that site's icons too, and they can win over
+  Hextra's. agentgateway.dev and kgateway.dev both ship their own `github` icon
+  with no `fill` and `width="98" height="96"`: they draw it black in light mode
+  and swap in a separate `github-white` icon for dark mode. On the docs hub that
+  `github` key shadowed Hextra's `fill="currentColor"` one, so the navbar GitHub
+  icon stayed black on the dark navbar, with a wide gap beside it.
+
+  Two fixes, both on the root <svg> only:
+    - No `fill` on the root → add `fill="currentColor"`, so unfilled shapes take
+      the link's text color. A root that already sets `fill` is left alone, which
+      keeps stroke icons (`fill="none"`) outlined.
+    - `width`/`height` on the root are dropped, so the injected `height` and the
+      viewBox decide the size. Otherwise the injected `height=24` wins over the
+      source `height="96"` (first duplicate attribute wins) while `width="98"`
+      survives, and the icon renders 98px wide.
+
+  An icon with hardcoded colors on its inner shapes still renders as authored.
+  The navbar-icon-color spec flags those.
+*/ -}}
+{{- $raw := index site.Data.icons .name -}}
+{{- if not $raw -}}
+  {{- errorf "icon %q not found" .name -}}
+{{- end -}}
+{{- $open := index (findRE `<svg[^>]*>` $raw 1) 0 -}}
+{{- $root := replaceRE `\s(width|height)=("[^"]*"|'[^']*'|[^\s>]+)` "" $open -}}
+{{- $attrs := .attributes | default "" -}}
+{{- if not (findRE `\sfill=` $root) -}}
+  {{- $attrs = printf `%s fill="currentColor"` $attrs -}}
+{{- end -}}
+{{- $root = replace $root "<svg" (printf "<svg %s" (trim $attrs " ")) -}}
+{{- return (replace $raw $open $root 1 | safeHTML) -}}
