@@ -199,6 +199,13 @@ for every consumer regardless of `[[pages]]`:
   copy-as-md script presence, image alt text
 - `file-size.spec.ts` — every built file under `[limits].maxFileMiB`
   (default 25), see 2c
+- `navbar-icon-color.spec.ts` — every navbar `<svg>` icon takes its color
+  from the theme: no hardcoded `fill` or `stroke`, and no shape left with no
+  fill, which SVG paints black. It samples 40 pages, because the navbar is the
+  same on every page of a build. Run it on the real product build, not only the
+  fixture: an imported site's `data/icons.yaml` can replace a theme icon, and
+  only the real build shows it. To skip it, set
+  `[checks] navbarIconColor = false`.
 - `contrast.spec.ts` / `viewport.spec.ts` (mostly) — sampled across
   crawled pages
 

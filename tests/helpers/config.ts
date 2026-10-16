@@ -94,6 +94,10 @@ export type Checks = {
   // Cloudflare Pages 25 MiB per-file limit, which fails the whole deploy).
   // Warns, without failing, above 80% of the limit. See file-size.spec.ts.
   fileSize: boolean;
+  // Built-HTML scan of the navbar's <svg> icons for a hardcoded fill/stroke or
+  // a shape with no fill (painted black), either of which keeps the icon one
+  // color in both themes. See navbar-icon-color.spec.ts.
+  navbarIconColor: boolean;
 };
 
 export type Allowlists = {
@@ -200,6 +204,7 @@ const DEFAULT_CHECKS: Checks = {
   // is a "prefer the canonical form" lint, not a correctness gate.
   reuseImagePair: false,
   fileSize: true,
+  navbarIconColor: true,
 };
 
 const DEFAULT_ALLOWLISTS: Allowlists = {

@@ -432,7 +432,7 @@
           {{- if not $link -}}{{ warnf "Icon menu item '%s' has no URL" .Name }}{{- end -}}
           {{- $rel := cond (eq .Params.icon "mastodon") "noreferrer me" "noreferrer" }}
           <a class="hx:max-md:hidden hx:p-2 hx:text-current" {{ if $external }}target="_blank" rel="{{ $rel }}"{{ end }} href="{{ $link }}" title="{{ or (T .Identifier) .Name | safeHTML }}">
-            {{- partial "utils/icon.html" (dict "name" .Params.icon "attributes" (printf "height=%d" $iconHeight)) -}}
+            {{- partial "utils/navbar-icon.html" (dict "name" .Params.icon "attributes" (printf "height=%d" $iconHeight)) -}}
             <span class="hx:sr-only">{{ or (T .Identifier) .Name | safeHTML }}</span>
           </a>
         {{- else -}}
@@ -486,7 +486,7 @@
                title="{{ or (T .Identifier) .Name | safeHTML }}"
                {{ if $itemExternal }}target="_blank" rel="{{ $itemRel }}"{{ end }}
                href="{{ $itemLink }}">
-              {{- partial "utils/icon.html" (dict "name" .Params.icon "attributes" (printf `height=%d class="hx:shrink-0"` $iconHeight)) -}}
+              {{- partial "utils/navbar-icon.html" (dict "name" .Params.icon "attributes" (printf `height=%d class="hx:shrink-0"` $iconHeight)) -}}
               <span>{{ or (T .Identifier) .Name | safeHTML }}</span>
             </a>
           {{- else -}}
