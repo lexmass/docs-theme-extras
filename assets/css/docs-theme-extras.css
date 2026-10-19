@@ -3364,4 +3364,13 @@ a[class*="word-break:break-word"] {
 }
 .dark .changelog-toolbar { border-color: #374151; background: #111827; }
 .dark .changelog-toolbar-label { color: #e5e7eb; }
-.dark .changelog-toolbar-select { background: #1f2937; border-color: #4b5563; }
+/* color-scheme makes the browser draw the open option list, the caret, and
+   the scrollbar dark too. Without it, Chrome on Windows and Linux draws the
+   list with the select's inherited light text on a white popup. The option
+   colors cover browsers that style the list from the <option> instead. */
+.dark .changelog-toolbar-select {
+  color-scheme: dark;
+  background: #1f2937;
+  border-color: #4b5563;
+}
+.dark .changelog-toolbar-select option { background: #1f2937; color: #e5e7eb; }
