@@ -51,6 +51,14 @@ test.describe("navbar-icon-color helper", () => {
     expect(svgProblems(`<svg viewBox="0 0 1 1"><g fill="currentColor"><path d="M0"/></g></svg>`)).toEqual([]);
   });
 
+  test("Tailwind's fill-current and stroke-current classes count as currentColor", () => {
+    // agentgateway.dev's navbar GitHub icon, trimmed.
+    expect(svgProblems(`<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12"/></svg>`)).toEqual([]);
+    expect(svgProblems(`<svg class="hx:fill-none hx:stroke-current"><path d="M0"/></svg>`)).toEqual([]);
+    // A color utility is not theme-following, so the shape still reads as unfilled.
+    expect(svgProblems(`<svg class="fill-white"><path d="M0"/></svg>`)).toHaveLength(1);
+  });
+
   test("fill-rule is not mistaken for fill", () => {
     expect(svgProblems(`<svg fill="currentColor"><path fill-rule="evenodd" d="M0"/></svg>`)).toEqual([]);
   });

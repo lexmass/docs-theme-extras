@@ -59,8 +59,21 @@ function stylePaint(tag: string, prop: "fill" | "stroke"): string | null {
   return m ? m[1].trim() : null;
 }
 
+// Tailwind's paint utilities, with or without Hextra's `hx:` prefix.
+// agentgateway.dev draws its GitHub icon as `<svg class="w-5 h-5 fill-current">`,
+// which is `fill: currentColor`. Only the theme-following values are mapped: a
+// color utility such as `fill-white` reads as no fill, so the icon is still
+// flagged. This trusts the site's CSS to define the class, which a build that
+// compiles Tailwind from its templates does.
+function classPaint(tag: string, prop: "fill" | "stroke"): string | null {
+  const tokens = (attr(tag, "class") ?? "").split(/\s+/).map((t) => t.replace(/^hx:/, ""));
+  if (tokens.includes(`${prop}-current`)) return "currentColor";
+  if (tokens.includes(`${prop}-none`)) return "none";
+  return null;
+}
+
 function paint(tag: string, prop: "fill" | "stroke"): string | null {
-  return stylePaint(tag, prop) ?? attr(tag, prop);
+  return stylePaint(tag, prop) ?? attr(tag, prop) ?? classPaint(tag, prop);
 }
 
 type Node = {
