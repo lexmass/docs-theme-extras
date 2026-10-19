@@ -24,6 +24,22 @@ deliberately, one PR at a time. Never use floating refs in production hugo confi
 
 ---
 
+## [0.3.20] — 2026-10-19
+
+### Fix — the navbar icon check failed kgateway.dev and agentgateway.dev, whose icons follow the theme (`tests/helpers/navbar-icon-color.ts`, `tests/navbar-icon-color.spec.ts`, `docs/content/testing/_index.md`)
+
+Bumping kgateway.dev and agentgateway.dev to 0.3.19 failed their framework tests on the new `navbar-icon-color.spec.ts`, though neither navbar is wrong. kgateway.dev draws its GitHub icon twice, a black copy under `hx:dark:hidden` and a white `github-white` copy under `hx:hidden hx:dark:inline-block`, so each copy is only ever shown on the background it was drawn for. The check read each `<svg>` on its own and flagged the black one as unfilled and the white one as a hardcoded `fill="#fff"`. agentgateway.dev draws its GitHub icon as `<svg class="w-5 h-5 fill-current">`, and its compiled CSS has `.fill-current{fill:currentColor}`, but the check read only `fill` attributes and inline styles, so it flagged that icon as unfilled too. Both are visible in view-source on https://kgateway.dev/docs/envoy/latest/ and https://agentgateway.dev/docs/kubernetes/latest/: search for `github-white-icon` and `fill-current`.
+
+The helper now finds navbar icons with parse5 rather than a tag scan, so it knows the elements around each `<svg>`. An icon on an element, or inside one, that shows in one theme only is skipped: `dark:hidden` for light, or `hidden` plus a `dark:` display (`dark:block`, `dark:inline-block`, and so on) for dark, each with or without the `hx:` prefix. `hidden` with a breakpoint such as `md:inline-block` is not a theme switch, so that icon is still checked. Tailwind's `fill-current`, `stroke-current`, `fill-none`, and `stroke-none` classes now count as the matching paint value. A color class such as `fill-white` still reads as no fill, so that icon is still flagged. The check trusts the site's CSS to define those classes. The leaked docs hub icon that the check was written for has neither a theme wrapper nor a class, so it is still flagged.
+
+Verified with six new unit tests in `navbar-icon-color.spec.ts`. Five of them fail on 0.3.19's helper; the sixth, the breakpoint case, guards against skipping too much. Also verified against local `hugo --gc --minify` builds of kgateway.dev and agentgateway.dev, both of which fail on 0.3.19 with the errors from CI and pass with this change, and the OSS and enterprise fixture builds, which pass. Takes effect when a consumer bumps its extras pin.
+
+### Chore — Dependabot npm PRs failed the Hugo warnings test until someone regenerated the pack file by hand (`.github/workflows/dependabot-npm-pack.yml`, `package.json`, `package-lock.json`, `packages/hugoautogen/hugo_packagemeta.json`)
+
+`packages/hugoautogen/hugo_packagemeta.json` stores a `sum` that hashes the root `package.json`. When Dependabot bumps a root devDependency, it does not regenerate that file. Hugo then logs `npm dependencies are out of sync, please run "hugo mod npm pack"`, and `tests/hugo-warnings.spec.ts` fails both brand legs. That happened on #50 and again on #68. The new `dependabot-npm-pack.yml` workflow runs on Dependabot PRs that change `package.json`. It runs `hugo mod npm pack`, commits only `hugo_packagemeta.json`, and pushes to the PR branch. Then it dispatches `test.yml` on the new commit, because a push made with `GITHUB_TOKEN` does not trigger workflows. If the pack also changes the generated `packages/hugoautogen/package.json`, the job fails rather than commit it, since hextra owns that file (see the earlier `.github/dependabot.yml` chore entry).
+
+#68 was the first run: it bumped `@playwright/test` 1.63.0 → 1.64.1 and `smol-toml` 1.9.0 → 1.9.1, and the workflow's bot commit `8607a1e` updated the `sum`, after which Test passed and the PR merged. Both are devDependencies, so rendered output does not change and consumers need no action.
+
 ## [0.3.19] — 2026-10-16
 
 ### Fix — navbar icons from an imported site's icon data stayed black in dark mode (`layouts/_partials/utils/navbar-icon.html`, `layouts/_partials/navbar.html`, `tests/navbar-icon-color.spec.ts`, `tests/helpers/navbar-icon-color.ts`, `tests/helpers/config.ts`, `playwright.config.ts`, `docs/content/testing/_index.md`)
