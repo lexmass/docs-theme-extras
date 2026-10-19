@@ -204,7 +204,10 @@ for every consumer regardless of `[[pages]]`:
   fill, which SVG paints black. It samples 40 pages, because the navbar is the
   same on every page of a build. Run it on the real product build, not only the
   fixture: an imported site's `data/icons.yaml` can replace a theme icon, and
-  only the real build shows it. To skip it, set
+  only the real build shows it. An icon shown in one theme only, under a
+  `dark:hidden` wrapper or a `hidden dark:inline-block` one, may use a fixed
+  color, so a black/white pair passes. Tailwind's `fill-current` and
+  `stroke-current` classes count as `currentColor`. To skip it, set
   `[checks] navbarIconColor = false`.
 - `contrast.spec.ts` / `viewport.spec.ts` (mostly) — sampled across
   crawled pages

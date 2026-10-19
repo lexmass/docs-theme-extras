@@ -16,6 +16,9 @@ import { target } from "./helpers/target";
 // product per job on the hub) and checks every <svg> in the navbar:
 //   - no hardcoded fill/stroke (only currentColor, none, inherit, transparent)
 //   - no shape left with no fill at all, since SVG paints that black
+// An icon shown in one theme only (a `dark:hidden` copy and a
+// `hidden dark:inline-block` copy, as kgateway.dev and agentgateway.dev draw
+// their GitHub icon) is skipped: it is never seen on the other background.
 //
 // The navbar comes from the same menu and icon data on every page of a build,
 // so a sample of pages is enough and keeps this fast on large builds.
