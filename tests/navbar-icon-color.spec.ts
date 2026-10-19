@@ -17,8 +17,9 @@ import { target } from "./helpers/target";
 //   - no hardcoded fill/stroke (only currentColor, none, inherit, transparent)
 //   - no shape left with no fill at all, since SVG paints that black
 // An icon shown in one theme only (a `dark:hidden` copy and a
-// `hidden dark:inline-block` copy, as kgateway.dev and agentgateway.dev draw
-// their GitHub icon) is skipped: it is never seen on the other background.
+// `hidden dark:inline-block` copy, as kgateway.dev draws its GitHub icon) may
+// use a fixed color, but not black on dark (set, or by having no fill) or
+// white on light.
 //
 // The navbar comes from the same menu and icon data on every page of a build,
 // so a sample of pages is enough and keeps this fast on large builds.
@@ -58,8 +59,45 @@ test.describe("navbar-icon-color helper", () => {
     // agentgateway.dev's navbar GitHub icon, trimmed.
     expect(svgProblems(`<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12"/></svg>`)).toEqual([]);
     expect(svgProblems(`<svg class="hx:fill-none hx:stroke-current"><path d="M0"/></svg>`)).toEqual([]);
-    // A color utility is not theme-following, so the shape still reads as unfilled.
-    expect(svgProblems(`<svg class="fill-white"><path d="M0"/></svg>`)).toHaveLength(1);
+  });
+
+  test("Tailwind palette colors are hardcoded; a site's own color names are trusted", () => {
+    expect(svgProblems(`<svg class="fill-white"><path d="M0"/></svg>`)).toEqual([
+      `<svg> has hardcoded fill="white" (from class "fill-white")`,
+    ]);
+    expect(svgProblems(`<svg class="hx:fill-gray-500/50"><path d="M0"/></svg>`)).toEqual([
+      `<svg> has hardcoded fill="gray-500" (from class "fill-gray-500/50")`,
+    ]);
+    // kgateway.dev's templates use `fill-secondary-link`, a color from its own theme.
+    expect(svgProblems(`<svg class="fill-secondary-link"><path d="M0"/></svg>`)).toEqual([]);
+  });
+
+  test("a dark: paint class switches with the theme", () => {
+    expect(svgProblems(`<svg class="fill-black dark:fill-white"><path d="M0"/></svg>`)).toEqual([]);
+    expect(svgProblems(`<svg fill="#000" class="hx:dark:fill-white"><path d="M0"/></svg>`)).toEqual([]);
+    // Other variants are states, not themes.
+    expect(svgProblems(`<svg class="fill-black hover:fill-white"><path d="M0"/></svg>`)).toHaveLength(1);
+  });
+
+  test("a class beats a fill attribute, and an inline style beats both, as in the browser", () => {
+    expect(svgProblems(`<svg fill="#000" class="fill-current"><path d="M0"/></svg>`)).toEqual([]);
+    expect(svgProblems(`<svg class="fill-current" style="fill: #000"><path d="M0"/></svg>`)).toEqual([
+      `<svg> has hardcoded fill="#000"`,
+    ]);
+  });
+
+  test("an arbitrary Tailwind color is reported as the hardcoded color, not as unfilled", () => {
+    expect(svgProblems(`<svg class="hx:fill-[#4a154b]"><path d="M0"/></svg>`)).toEqual([
+      `<svg> has hardcoded fill="#4a154b" (from class "fill-[#4a154b]")`,
+    ]);
+    expect(svgProblems(`<svg class="fill-[color:#fff]"><path d="M0"/></svg>`)).toEqual([
+      `<svg> has hardcoded fill="#fff" (from class "fill-[color:#fff]")`,
+    ]);
+    expect(svgProblems(`<svg class="fill-[currentColor]"><path d="M0"/></svg>`)).toEqual([]);
+    // These set the stroke width, not its color.
+    for (const width of ["stroke-[2px]", "stroke-[1.5]", "stroke-[length:var(--w)]", "stroke-2"]) {
+      expect(svgProblems(`<svg fill="none" stroke="currentColor" class="${width}"><path d="M0"/></svg>`)).toEqual([]);
+    }
   });
 
   test("fill-rule is not mistaken for fill", () => {
@@ -75,8 +113,8 @@ test.describe("navbar-icon-color helper", () => {
     ]);
   });
 
-  // kgateway.dev and agentgateway.dev draw the GitHub icon twice: black for the
-  // light theme, white for the dark one. Each copy is only ever shown on the
+  // kgateway.dev draws the GitHub icon twice: black for the light theme, white
+  // for the dark one. Each copy is only ever shown on the
   // background it was drawn for. Trimmed from kgateway.dev's built navbar.
   const pair =
     `<nav><a href="https://github.com/kgateway-dev" title="GitHub">` +
@@ -113,6 +151,54 @@ test.describe("navbar-icon-color helper", () => {
     expect(navbarIconProblems(html)).toEqual([
       { label: "GitHub", reason: expect.stringMatching(/paint black/) },
     ]);
+  });
+
+  test("a dark-only copy with no fill is flagged, since it paints black on dark", () => {
+    // The pair with the white copy's fill left off.
+    expect(navbarIconProblems(pair.replace(` fill="#fff"`, ""))).toEqual([
+      { label: "GitHub", reason: expect.stringMatching(/paint black on the dark navbar/) },
+    ]);
+  });
+
+  test("a theme-only copy in the color that vanishes on its background is flagged", () => {
+    const dark = `<nav><a title="X"><span class="hidden dark:block"><svg fill="#000"><path d="M0"/></svg></span></a></nav>`;
+    const light = `<nav><a title="X"><svg class="hx:dark:hidden"><path fill="white" d="M0"/></svg></a></nav>`;
+    expect(navbarIconProblems(dark)).toEqual([
+      { label: "X", reason: `<svg> has fill="#000", which is black on the dark navbar it is shown on` },
+    ]);
+    expect(navbarIconProblems(light)).toEqual([
+      { label: "X", reason: `<path> has fill="white", which is white on the light navbar it is shown on` },
+    ]);
+    // Any other fixed color passes: only the literal black and white are known to vanish.
+    expect(
+      navbarIconProblems(`<nav><a title="X"><span class="hidden dark:block"><svg fill="#333"><path d="M0"/></svg></span></a></nav>`),
+    ).toEqual([]);
+  });
+
+  test("a fill set on the HTML around the icon is inherited", () => {
+    // CSS fill inherits from HTML parents into an inline <svg>.
+    expect(
+      navbarIconProblems(`<nav><a title="X" class="fill-current"><svg><path d="M0"/></svg></a></nav>`),
+    ).toEqual([]);
+    expect(
+      navbarIconProblems(`<nav><a title="X"><span style="fill:#4a154b"><svg><path d="M0"/></svg></span></a></nav>`),
+    ).toEqual([{ label: "X", reason: `<svg> inherits hardcoded fill="#4a154b"` }]);
+    expect(
+      navbarIconProblems(`<nav><a title="X"><span class="hidden dark:block fill-black"><svg><path d="M0"/></svg></span></a></nav>`),
+    ).toEqual([
+      {
+        label: "X",
+        reason: `<svg> inherits fill="black" (from class "fill-black" on <span>), which is black on the dark navbar it is shown on`,
+      },
+    ]);
+    // An icon that fills its own shapes never shows the inherited fill.
+    expect(
+      navbarIconProblems(`<nav><a title="X" class="fill-white"><svg fill="currentColor"><path d="M0"/></svg></a></nav>`),
+    ).toEqual([]);
+    // A fill attribute on an HTML element does nothing.
+    expect(
+      navbarIconProblems(`<nav><a title="X" fill="currentColor"><svg><path d="M0"/></svg></a></nav>`),
+    ).toEqual([{ label: "X", reason: expect.stringMatching(/paint black/) }]);
   });
 
   test("an icon outside the pair is still checked", () => {
