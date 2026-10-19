@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
-import { navbarIconProblems, svgProblems } from "./helpers/navbar-icon-color";
+import { navbarHtml, navbarIconProblems, navbarSvgs, svgProblems } from "./helpers/navbar-icon-color";
 import { target } from "./helpers/target";
 
 // Navbar icons must take their color from the theme.
@@ -61,6 +61,56 @@ test.describe("navbar-icon-color helper", () => {
       `<nav class="sidebar"><svg fill="red"></svg></nav>`;
     expect(navbarIconProblems(html)).toEqual([
       { label: "GitHub", reason: expect.stringMatching(/paint black/) },
+    ]);
+  });
+
+  // kgateway.dev and agentgateway.dev draw the GitHub icon twice: black for the
+  // light theme, white for the dark one. Each copy is only ever shown on the
+  // background it was drawn for. Trimmed from kgateway.dev's built navbar.
+  const pair =
+    `<nav><a href="https://github.com/kgateway-dev" title="GitHub">` +
+    `<span class="hx:inline-block hx:dark:hidden"><svg height=24 viewBox="0 0 98 96"><path fill-rule="evenodd" d="M48"/></svg></span>` +
+    `<span class="hx:hidden hx:dark:inline-block github-white-icon"><svg height=24 viewBox="0 0 98 96"><path fill="#fff" d="M48"/></svg></span>` +
+    `</a></nav>`;
+
+  test("a light/dark pair of fixed-color icons passes", () => {
+    expect(navbarIconProblems(pair)).toEqual([]);
+  });
+
+  test("each copy of the pair is tagged with its theme", () => {
+    const nav = navbarHtml(pair)!;
+    expect(navbarSvgs(nav).map((s) => [s.label, s.theme])).toEqual([
+      ["GitHub", "light"],
+      ["GitHub", "dark"],
+    ]);
+  });
+
+  test("theme classes count on the <svg> itself and without the hx: prefix", () => {
+    expect(
+      navbarIconProblems(`<nav><a title="X"><svg class="dark:hidden"><path d="M0"/></svg></a></nav>`),
+    ).toEqual([]);
+    expect(
+      navbarIconProblems(
+        `<nav><a title="X"><div class="hidden dark:block"><span><svg><path fill="#fff" d="M0"/></svg></span></div></a></nav>`,
+      ),
+    ).toEqual([]);
+  });
+
+  test("hiding by breakpoint is not hiding by theme", () => {
+    // Shown in both themes from md up, so it must still follow the theme.
+    const html = `<nav><a title="GitHub"><span class="hx:hidden hx:md:inline-block"><svg><path d="M0"/></svg></span></a></nav>`;
+    expect(navbarIconProblems(html)).toEqual([
+      { label: "GitHub", reason: expect.stringMatching(/paint black/) },
+    ]);
+  });
+
+  test("an icon outside the pair is still checked", () => {
+    const html = pair.replace(
+      "</a></nav>",
+      `</a><a title="Slack"><svg><path fill="#4a154b" d="M0"/></svg></a></nav>`,
+    );
+    expect(navbarIconProblems(html)).toEqual([
+      { label: "Slack", reason: `<path> has hardcoded fill="#4a154b"` },
     ]);
   });
 });
