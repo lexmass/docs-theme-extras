@@ -1,0 +1,94 @@
+name: Dependabot npm pack
+
+# packages/hugoautogen/hugo_packagemeta.json carries a `sum` that hashes the
+# ROOT package.json. Dependabot bumps root devDependencies without regenerating
+# it, so Hugo logs "WARN  npm dependencies are out of sync, please run
+# "hugo mod npm pack"" and tests/hugo-warnings.spec.ts reds both brand legs on
+# every such PR (first #50, again #68). This job reruns `hugo mod npm pack` on
+# the Dependabot branch and pushes the result.
+#
+# Only hugo_packagemeta.json is committed. The pack also rewrites
+# packages/hugoautogen/package.json from hextra's module graph, but that file
+# is not ours to change here (see the ignore list in dependabot.yml); if it
+# ever drifts, the job fails instead of committing it silently.
+#
+# The checkout directory is named after the repo (docs-theme-extras), which is
+# what Hugo writes into the generated `name` field, so no rename is needed.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - package.json
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# contents: write to push the regenerated file. actions: write to dispatch
+# Test afterwards: a push made with GITHUB_TOKEN does not trigger workflows,
+# but a workflow_dispatch made with it does.
+permissions:
+  contents: write
+  actions: write
+
+env:
+  HUGO_VERSION: 0.160.1
+
+jobs:
+  pack:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Hugo
+        uses: peaceiris/actions-hugo@2752ce1d29631191ea3f27c23495fa06139a5b78 # v3.2.1
+        with:
+          hugo-version: ${{ env.HUGO_VERSION }}
+          extended: true
+
+      - name: Set up Go (Hugo modules use go.mod)
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.21'
+
+      - name: Run hugo mod npm pack
+        run: hugo mod npm pack
+
+      - name: Check that only the sum changed
+        run: |
+          changed=$(git status --porcelain | awk '{print $2}')
+          echo "Changed files:"; echo "${changed:-<none>}"
+          unexpected=$(echo "$changed" | grep -vx 'packages/hugoautogen/hugo_packagemeta.json' | grep . || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::hugo mod npm pack changed files other than hugo_packagemeta.json. Regenerate locally and review: $unexpected"
+            git diff
+            exit 1
+          fi
+
+      - name: Commit and push
+        id: push
+        run: |
+          if git diff --quiet -- packages/hugoautogen/hugo_packagemeta.json; then
+            echo "hugo_packagemeta.json is already in sync."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/hugoautogen/hugo_packagemeta.json
+          git commit -m "Regenerate hugo_packagemeta.json (hugo mod npm pack)"
+          git push origin "HEAD:${{ github.head_ref }}"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # The run that Dependabot's own push started tested the stale sum and
+      # fails. Dispatch Test against the fixed head so the PR gets a real result.
+      - name: Rerun Test on the new commit
+        if: steps.push.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run test.yml --repo "${{ github.repository }}" --ref "${{ github.head_ref }}"
