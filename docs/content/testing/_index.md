@@ -204,7 +204,21 @@ for every consumer regardless of `[[pages]]`:
   fill, which SVG paints black. It samples 40 pages, because the navbar is the
   same on every page of a build. Run it on the real product build, not only the
   fixture: an imported site's `data/icons.yaml` can replace a theme icon, and
-  only the real build shows it. To skip it, set
+  only the real build shows it. An icon shown in one theme only, under a
+  `dark:hidden` wrapper or a `hidden dark:inline-block` one, may use a fixed
+  color, so a black/white pair passes. The check still flags such an icon
+  when it is black on dark, set or by having no fill, or white on light. It
+  matches only the literal spellings (`black`, `#000`, `white`, `#fff`, and
+  so on), so a theme-only icon in any other color is not checked for
+  contrast. Paint is read in the browser's order: inline style, then class,
+  then the `fill`/`stroke` attribute. A fill or stroke set in CSS on the HTML
+  around the icon is inherited. Tailwind's `fill-current` and
+  `stroke-current` classes count as `currentColor`, and a `dark:` paint class
+  such as `fill-black dark:fill-white` counts as following the theme.
+  Tailwind palette colors (`fill-white`, `fill-gray-500`) and arbitrary
+  values (`fill-[#fff]`) count as that color. Any other color name, such as
+  `fill-secondary-link`, is a color from the site's own theme and is
+  trusted. To skip it, set
   `[checks] navbarIconColor = false`.
 - `contrast.spec.ts` / `viewport.spec.ts` (mostly) — sampled across
   crawled pages
