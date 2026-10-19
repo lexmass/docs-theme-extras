@@ -12,8 +12,8 @@
   Example: code-only
 
   Notes:
-    Emits a type selector (by release, chronological, or compare versions), an
-    empty container, and the scripts that populate it. The rendering happens
+    Emits a labeled toolbar with a type selector (by release, chronological, or
+    compare versions), an empty container, and the scripts that populate it. The rendering happens
     entirely client-side.
 
     `enterprise="true"` adds a checkbox that toggles OSS notes inside an
@@ -30,16 +30,23 @@
     The example is marked `code-only` for that reason: with none of those assets
     present, a live render would produce an empty box and three failed requests.
 */ -}}
-<div style="display:flex;">
-<select name="type" id="solodocs-select-type">
-    <option value="minorrelease">By Release</option>
-    <option value="chronological">By Chronological Order</option>
-    <option value="compareversions">Compare Versions</option>
-</select>
-{{ if eq (.Get "enterprise") "true" }}
-<input type="checkbox" name="solodocs-showOpenSource" id="solodocs-showOpenSource" style="margin-top: 0.5%;margin-left: 5%;" checked>
-<label for="solodocs-showOpenSource">Show Open Source Notes</label>
-{{ end }}
+{{- /* The ids are the hooks the consumer's render_changelog.js binds to, so
+  they must not change. The classes carry the layout (docs-theme-extras.css). */ -}}
+<div class="changelog-toolbar">
+  <label class="changelog-toolbar-field" for="solodocs-select-type">
+    <span class="changelog-toolbar-label">View</span>
+    <select name="type" id="solodocs-select-type" class="changelog-toolbar-select">
+      <option value="minorrelease">By release</option>
+      <option value="chronological">By chronological order</option>
+      <option value="compareversions">Compare versions</option>
+    </select>
+  </label>
+  {{- if eq (.Get "enterprise") "true" }}
+  <label class="changelog-toolbar-check" for="solodocs-showOpenSource">
+    <input type="checkbox" name="solodocs-showOpenSource" id="solodocs-showOpenSource" checked>
+    Show open source notes
+  </label>
+  {{- end }}
 </div>
 
 <div id="solodocs-changelogdiv"></div>
