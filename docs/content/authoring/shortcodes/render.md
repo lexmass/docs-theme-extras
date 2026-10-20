@@ -25,9 +25,9 @@ Either call form works, and both produce identical HTML.
 
 ## Notes
 
-Emits a type selector (by release, chronological, or compare versions), an
-empty container, and the scripts that populate it. The rendering happens
-entirely client-side.
+Emits a labeled toolbar with a type selector (by release, chronological, or
+compare versions), an empty container, and the scripts that populate it.
+The rendering happens entirely client-side.
 
 `enterprise="true"` adds a checkbox that toggles OSS notes inside an
 enterprise changelog. It is absent by default, so an OSS changelog gets the
