@@ -34,7 +34,24 @@
   z-index: 1000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border: 1px solid #e1e5e9;
-  pointer-events: none;
+  pointer-events: auto;
+}
+
+/* Keep the term hovered while the pointer crosses the 8px positioning gap.
+ * The bridge belongs to the fixed tooltip, so it also works inside tables.
+ */
+.glossary-term > span::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+
+.glossary-term > span.tooltip-below::before {
+  top: auto;
+  bottom: 100%;
 }
 
 /* Tooltip arrow — JS sets `.tooltip-below` when the tooltip flips beneath

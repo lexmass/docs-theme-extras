@@ -76,12 +76,23 @@ document.addEventListener('DOMContentLoaded', function () {
   glossaryTerms.forEach(function (term) {
     // Desktop: hover and keyboard focus.
     term.addEventListener('mouseenter', function () { showTooltip(term); });
-    term.addEventListener('mouseleave', function () { hideTooltip(term); });
-    term.addEventListener('focus', function () { showTooltip(term); });
-    term.addEventListener('blur', function () { hideTooltip(term); });
+    term.addEventListener('mouseleave', function () {
+      if (!term.contains(document.activeElement) && !term.classList.contains('active')) {
+        hideTooltip(term);
+      }
+    });
+    // Focus can move from the term into its Learn more link. Treat the whole
+    // term/tooltip subtree as one focus region, just as we do for hover.
+    term.addEventListener('focusin', function () { showTooltip(term); });
+    term.addEventListener('focusout', function (e) {
+      if (!term.contains(e.relatedTarget) && !term.matches(':hover') && !term.classList.contains('active')) {
+        hideTooltip(term);
+      }
+    });
 
     // Mobile/touch: tap to toggle.
     term.addEventListener('click', function (e) {
+      if (e.target.closest('a')) return;
       if (window.innerWidth <= 768) {
         e.preventDefault();
         const wasActive = term.classList.contains('active');
